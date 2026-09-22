@@ -92,20 +92,39 @@
 
 
 
-    /* Основний екран */
+    /* Основний екран завантаження (відео logo.mp4 на весь екран) */
     .loadpage {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
+        inset: 0;
+        width: 100vw;
         height: 100vh;
+        height: 100dvh;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center; /* Центрує текст "Привіт" по вертикалі */
-        z-index: 9999;
-        background: transparent; /* Щоб було видно відео-фон */
-        font-family: 'e-UkraineHead', sans-serif;
+        justify-content: center;
+        z-index: 99999;
+        background: #000000;
+        overflow: hidden;
+        transition: opacity 0.45s ease-out;
+        pointer-events: all;
+    }
+
+    .loadpage.fade-out {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .loadpage.hidden {
+        display: none !important;
+        pointer-events: none !important;
+    }
+
+    .loadpage-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     @font-face {
@@ -170,14 +189,26 @@
         }
     }
 
-    /* Відео на задньому плані */
+    /* Відео на задньому плані (background_gradient.mp4) */
     .video-background {
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
         height: 100vh;
-        z-index: -1;
+        height: 100dvh;
+        overflow: hidden;
+        z-index: 0;
+        pointer-events: none;
+        display: block;
+    }
+
+    .video-background video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     * {
@@ -185,10 +216,37 @@
         padding: 0;
         font-family: 'e-Ukraine';
         box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
     }
 
     html, body {
         overflow: hidden;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        -webkit-touch-callout: none !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
+        overscroll-behavior: none !important;
+        touch-action: manipulation;
+    }
+
+    /* Повне приховування смуги прокрутки (скролбару праворуч) як у нативному APK */
+    html, body, *, .pre, .block, .main, div, section, ul, main {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }
+
+    *::-webkit-scrollbar,
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    .pre::-webkit-scrollbar,
+    div::-webkit-scrollbar {
+        width: 0px !important;
+        height: 0px !important;
+        display: none !important;
+        background: transparent !important;
+        -webkit-appearance: none !important;
     }
 
     .bg-start {
@@ -309,7 +367,10 @@
         align-items: center;
         justify-content: center;
         position: fixed;
+        inset: 0;
+        z-index: 5000;
         background: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
+        transition: opacity 0.3s ease-out;
     }
 
         .start-div.active {
@@ -320,6 +381,8 @@
         .start-div > h1 {
             font-weight: 300;
             font-size: 26px;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
     .start-block {
@@ -341,6 +404,16 @@
             font-size: 30px;
             cursor: pointer;
             color: black;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s ease, background-color 0.1s ease;
+        }
+
+        .start-block > button:active {
+            transform: scale(0.9);
+            background: #dbeef3;
         }
 
         .start-block > img {
@@ -354,6 +427,10 @@
             padding: 18px;
             box-sizing: border-box;
             transition: transform 0.15s ease, background-color 0.15s ease;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .start-block > img:active {
@@ -421,6 +498,7 @@
         align-items: center;
         justify-content: center;
         color: #ffffff;
+        transition: filter 0.3s ease;
     }
 
     .biometric-face-svg {
@@ -436,26 +514,51 @@
         height: 2px;
         left: 8px;
         top: 14px;
-        background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-        box-shadow: 0 0 8px #38bdf8;
-        border-radius: 2px;
-        opacity: 0.9;
-        animation: bioScanAnim 1.3s ease-in-out infinite alternate;
+        background: linear-gradient(90deg, transparent 0%, #38bdf8 25%, #bae6fd 50%, #38bdf8 75%, transparent 100%);
+        border-radius: 9999px;
         pointer-events: none;
+        will-change: transform, opacity, box-shadow;
+        backface-visibility: hidden;
+        animation: bioScanAnim 1.25s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+    }
+
+    .biometric-scan-line::after {
+        content: '';
+        position: absolute;
+        inset: -6px -2px;
+        background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.5) 0%, rgba(56, 189, 248, 0.15) 55%, transparent 80%);
+        filter: blur(4px);
+        pointer-events: none;
+        border-radius: 9999px;
     }
 
     @keyframes bioScanAnim {
         0% {
-            top: 14px;
-            opacity: 0.4;
+            transform: translate3d(0, 0, 0);
+            opacity: 0.45;
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+        }
+        30% {
+            opacity: 0.85;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.75), 0 0 16px rgba(56, 189, 248, 0.4);
         }
         50% {
             opacity: 1;
+            box-shadow: 0 0 14px #38bdf8, 0 0 24px rgba(56, 189, 248, 0.7), 0 0 36px rgba(56, 189, 248, 0.35);
+        }
+        70% {
+            opacity: 0.85;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.75), 0 0 16px rgba(56, 189, 248, 0.4);
         }
         100% {
-            top: 58px;
-            opacity: 0.4;
+            transform: translate3d(0, 44px, 0);
+            opacity: 0.45;
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
         }
+    }
+
+    .biometric-modal.scanning .biometric-icon-container {
+        filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.3));
     }
 
     .biometric-modal.scanning .bio-corner {
@@ -465,9 +568,11 @@
     @keyframes bioCornerPulse {
         0%, 100% {
             stroke: #ffffff;
+            filter: drop-shadow(0 0 0px transparent);
         }
         50% {
             stroke: #38bdf8;
+            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.65));
         }
     }
 
@@ -570,6 +675,7 @@
         position: fixed;
         opacity: 0;
         pointer-events: none;
+        z-index: 1;
     }
 
     .footer {
@@ -855,7 +961,16 @@
         align-items: center;
         width: 100%;
         height: 100%;
-        overflow-y: scroll;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .pre::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
     }
 
     .nezlamnist {
@@ -986,46 +1101,68 @@
 
     .slider {
         width: 95%;
+        max-width: 360px;
         transform-style: preserve-3d;
-        transition:none;
+        -webkit-transform-style: preserve-3d;
+        perspective: 1200px;
+        -webkit-perspective: 1200px;
         position: relative;
         min-width: 0;
-        height: 90%;
-        margin-top: 20px
+        height: 480px;
+        margin: 15px auto 10px;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
     }
+
     .slider.is-flipping {
-    pointer-events: none;
+        pointer-events: none;
     }
 
-    .front {
-        position: absolute;
-        background-color: rgba(255, 255, 255, 0.4);
-    }
-
-    .back {
-        position: relative;
-        background: #fff;
-    }
-
+    .slider .front,
+    .slider .back,
     .front,
     .back {
         width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
         backface-visibility: hidden;
-        margin: auto;
+        -webkit-backface-visibility: hidden;
         display: flex;
         flex-direction: column;
-        padding: 20px 15px;
-        border-radius: 20px;
-        -webkit-backface-visibility: hidden;
-        height: 100%;
+        padding: 22px 18px;
+        border-radius: 24px;
+        box-sizing: border-box;
+        overflow: hidden;
     }
 
-        .back.flipped {
-            transform: rotateY(0);
-        }
+    .slider .front,
+    .front {
+        background-color: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        transform: rotateY(0deg);
+        -webkit-transform: rotateY(0deg);
+        z-index: 2;
+    }
 
+    .slider .back,
     .back {
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+        z-index: 1;
+    }
+
+    .back.flipped {
+        transform: rotateY(0deg);
+        -webkit-transform: rotateY(0deg);
     }
 
     .moreInfo {
@@ -1450,48 +1587,14 @@
         </div>
     </div>
 
-    <style>
-        .video-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 100%;
-            overflow: hidden;
-            z-index: -1;
-            display: none;
-        }
-
-
-            .video-background.active {
-                display: block;
-            }
-
-        #background-video {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: 100vh;
-            z-index: -1;
-            transform: translate(-50%, -50%);
-        }
-    </style>
-
-    <div class="loadpage">
-        <div class="welcome-text">Привіт 👋</div>
-        <div class="logos-container">
-            <div class="diia-logo-black"></div>
-            <div class="mct-logo">
-                <img src="assets/uasign.svg" alt="Міністерство цифрової трансформації України">
-            </div>
-        </div>
+    <div class="loadpage" id="loadpage">
+        <video id="introLogoVideo" class="loadpage-video" autoplay muted playsinline preload="auto">
+            <source src="assets/logo.mp4" type="video/mp4">
+        </video>
     </div>
 
-    <div class="video-background">
-        <video id="myVideo" autoplay muted playsinline style="width: 100%; height: 100vh; object-fit: cover;">
+    <div class="video-background" id="video-background">
+        <video id="myVideo" muted loop playsinline preload="auto" style="width: 100%; height: 100%; object-fit: cover;">
             <source id="videoSource" src="assets/background_gradient.mp4" type="video/mp4">
         </video>
     </div>
@@ -1514,8 +1617,8 @@
                     <g class="bio-face-features">
                         <path class="bio-eye" d="M29 32V35" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
                         <path class="bio-eye" d="M51 32V35" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                        <path class="bio-nose" d="M40 30V43H36" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path class="bio-smile" d="M30 52C32.5 55.5 36 57 40 57C44 57 47.5 55.5 50 52" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                        <path class="bio-nose" d="M40 30V43H36" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path class="bio-smile" d="M30 52C32.5 55.5 36 57 40 57C44 57 47.5 55.5 50 52" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
                     </g>
                     <!-- Success Checkmark -->
                     <path class="bio-checkmark" d="M26 42L36 52L55 28" stroke="#34C759" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;"/>
@@ -1538,18 +1641,18 @@
             <div></div>
         </div>
         <div class="start-block">
-            <button>1</button>
-            <button>2</button>
-            <button>3</button>
-            <button>4</button>
-            <button>5</button>
-            <button>6</button>
-            <button>7</button>
-            <button>8</button>
-            <button>9</button>
-            <img src="biometrics.png" />
-            <button>0</button>
-            <button data-type="delete"
+            <button type="button">1</button>
+            <button type="button">2</button>
+            <button type="button">3</button>
+            <button type="button">4</button>
+            <button type="button">5</button>
+            <button type="button">6</button>
+            <button type="button">7</button>
+            <button type="button">8</button>
+            <button type="button">9</button>
+            <img id="btn-biometrics" class="btn-biometrics" src="assets/biometrics.png" alt="Face ID" />
+            <button type="button">0</button>
+            <button type="button" data-type="delete"
                     style="
                         display: flex;
                         align-items: center;
@@ -3085,37 +3188,12 @@
                 </div>
             </div>
             <script>
-                // 1. ЛОГІКА ВІДЕО ТА ЗАВАНТАЖЕННЯ
+                // 1. ЛОГІКА ВІДЕО ФОНУ (фонове відео запускається після вводу пароля у unlockApp)
                 const video = document.getElementById('myVideo');
-                const source = document.getElementById('videoSource');
-                const bgVideo = "assets/background_gradient.mp4";
-                const loadPage = document.querySelector('.loadpage');
-
-                window.addEventListener('load', () => {
-                    video.play().catch(() => {
-                        // Для PWA: якщо автозапуск заблоковано
-                        document.body.addEventListener('click', () => {
-                            video.play();
-                        }, { once: true });
-                    });
-                });
-
-                video.onended = function () {
-                    if (!video.loop) {
-                        source.src = bgVideo;
-                        video.load();
-                        video.loop = true;
-                        video.play();
-
-                        if (loadPage) {
-                            loadPage.style.transition = "opacity 1s ease";
-                            loadPage.style.opacity = '0';
-                            setTimeout(() => {
-                                loadPage.style.display = 'none';
-                            }, 1000);
-                        }
-                    }
-                };
+                if (video) {
+                    video.loop = true;
+                    video.muted = true;
+                }
 
                 // 2. УНІВЕРСАЛЬНА ФУНКЦІЯ ДЛЯ МОДАЛЬНИХ ВІКОН (СВАЙП ВНИЗ)
                 const overlay = document.getElementById('overlay');
@@ -5447,233 +5525,152 @@
     // });
 
 
-    var isWorking = true;
-    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    var isAndroid = /Android/i.test(navigator.userAgent);
-    var isMobile = isIOS || isAndroid;
-    var isInWebAppiOS = (window.navigator.standalone === true);
-    var isInWebAppChrome = (window.matchMedia('(display-mode: standalone)').matches);
-    var isPWA = isInWebAppiOS || isInWebAppChrome;
-
-    if (!isMobile) {
-        // Десктоп або планшет — повідомляємо, що тільки мобільний
-        isWorking = false;
-        $('body').html(
-            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:20px;">' +
-            '<div style="font-size:48px;margin-bottom:16px;">📱</div>' +
-            '<div style="font-size:20px;font-weight:600;margin-bottom:8px;">Тільки для мобільних</div>' +
-            '<p style="color:#666;font-size:14px;">Відкрийте цю сторінку на смартфоні та встановіть як додаток.</p>' +
-            '</div>'
-        );
-        $('body').addClass('nononopage');
-    } else if (!isPWA) {
-        // Мобільний, але не PWA — показуємо інструкцію
-        isWorking = false;
-        var installHtml;
-        if (isIOS) {
-            installHtml =
-                '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:24px;">' +
-                '<div style="font-size:48px;margin-bottom:16px;">📲</div>' +
-                '<div style="font-size:20px;font-weight:600;margin-bottom:12px;">Встановіть додаток</div>' +
-                '<p style="color:#444;font-size:14px;line-height:1.6;margin-bottom:16px;">' +
-                '1. Натисніть кнопку <b>Поділитися</b> (квадрат зі стрілкою вгору) внизу Safari<br>' +
-                '2. Оберіть <b>«На екран "Домівка"»</b><br>' +
-                '3. Натисніть <b>«Додати»</b> та відкрийте додаток з екрану' +
-                '</p>' +
-                '<div style="font-size:36px;">⬆️ 🔲</div>' +
-                '</div>';
-        } else {
-            installHtml =
-                '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:24px;">' +
-                '<div style="font-size:48px;margin-bottom:16px;">📲</div>' +
-                '<div style="font-size:20px;font-weight:600;margin-bottom:12px;">Встановіть додаток</div>' +
-                '<p style="color:#444;font-size:14px;line-height:1.6;margin-bottom:16px;">' +
-                '1. Натисніть <b>⋮ три крапки</b> у браузері Chrome<br>' +
-                '2. Оберіть <b>«Додати на головний екран»</b><br>' +
-                '3. Натисніть <b>«Додати»</b> та відкрийте додаток' +
-                '</p>' +
-                '<div style="font-size:36px;">⋮ 🏠</div>' +
-                '</div>';
-        }
-        $('body').html(installHtml);
-        $('body').addClass('nononopage');
-    }
-
-
-
-
-
-
-
-    if (isWorking) {
-        setTimeout(function () {
-            $('.zublogo').fadeIn(1);
-
-            setTimeout(function () {
-                $('.zublogo').css('transition', '.2s');
-                $('.diyalogo').css('transition', '.2s');
-                $('.zublogo').css('transform', 'translateX(45px)');
-                $('.diyalogo').css('transform', 'translateX(-45px)');
-
-                setTimeout(function () {
-                    $('.loadtext').fadeIn(600);
-                    $('.loadtext').css('transition', '.2s');
-                    $('.loadtext').css('transform', 'translateX(45px)');
-                }, 1500);
-
-                setTimeout(function () {
-                    $('.diyalogo').css('transition', '.4s');
-                    $('.diyalogo').css('transition', '.2s');
-                    $('.diyalogo').css('transform', 'scale(0)');
-                    $('.zublogo').css('transform', 'translateX(-104px)');
-
-                    $('.loginpage').fadeIn(1);
-                    $('.papage').css('opacity', '1');
-
-                    setTimeout(function () {
-                        var ves =
-                            ($('.papage > .footer').height() -
-                                $('.papage > .footer > .ft_icons').height()) /
-                            2;
-                        $('.zep').css('padding-bottom', ves + 'px');
-                        var zaz =
-                            ves + 13 + $('.papage > .footer > .ft_icons').height();
-                        $('.menu').css('max-height', 'calc(100% - ' + zaz + 'px)');
-                        $('.ok').css('margin-bottom', (ves + 13) * 2 + 'px');
-                    }, 300);
-
-                    setTimeout(function () {
-                        $('.loadpage').fadeOut(200);
-                        $('.start-div').addClass('active');
-                        if (typeof triggerBiometricAuth === 'function') {
-                            triggerBiometricAuth(true);
-                        }
-                    }, 1500);
-                }, 1500);
-            }, 700);
-        }, 700);
-        $('.diyalogo').fadeIn(500);
-
-
-        var marquee = $('.line1');
-        if (marquee.length && marquee[0]) {
-            // Дублируем контент, чтобы создать эффект непрерывного движения
-            var originalContent = marquee.html();
-            marquee.html(originalContent + originalContent);
-
-            // Вычисляем ширину контента и устанавливаем начальное положение
-            var contentWidth = marquee[0].scrollWidth / 2;
-            marquee.scrollLeft(contentWidth);
-
-            // Запускаем анимацию
-            marquee.marquee({
-                allowCss3Support: true,
-                css3easing: 'linear',
-                easing: 'linear',
-                delayBeforeStart: 0,
-                direction: 'left',
-                duplicated: true,
-                gap: 5,
-                duration: 5000,
-            });
-        }
-
-        var marquee2 = $('.line2');
-        if (marquee2.length && marquee2[0]) {
-            // Дублируем контент, чтобы создать эффект непрерывного движения
-            var originalContent = marquee2.html();
-            marquee2.html(originalContent + originalContent);
-
-            // Вычисляем ширину контента и устанавливаем начальное положение
-            var contentWidth = marquee2[0].scrollWidth / 2;
-            marquee2.scrollLeft(contentWidth);
-
-            // Запускаем анимацию
-            marquee2.marquee({
-                allowCss3Support: true,
-                css3easing: 'linear',
-                easing: 'linear',
-                delayBeforeStart: 0,
-                direction: 'left',
-                duplicated: true,
-                gap: 50,
-                duration: 15000,
-            });
-        }
-    }
-
+    // ─────────────────────────────────────────────────────────────
+    // ВІДЕО ЗАВАНТАЖЕННЯ (logo.mp4) ПЕРЕД ВВОДОМ ПАРОЛЯ ТА АВТОРИЗАЦІЯ
+    // ─────────────────────────────────────────────────────────────
     let enteredPin = '';
 
-function updatePinDots() {
-    const dots = document.querySelectorAll('.start-vhod > div');
-    dots.forEach((dot, i) => {
-        dot.classList.toggle('active', i < enteredPin.length);
-    });
-}
-
-function shakePinPad() {
-    const block = document.querySelector('.start-block');
-    if (typeof gsap !== 'undefined') {
-        gsap.fromTo(block, { x: 0 }, { x: [-12, 12, -8, 8, 0], duration: 0.4 });
+    function updatePinDots() {
+        const dots = document.querySelectorAll('.start-vhod > div');
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i < enteredPin.length);
+        });
     }
-    navigator.vibrate?.([50, 30, 50]);
-}
 
-function unlockApp() {
-    const bioOverlay = document.getElementById('biometric-overlay');
-    if (bioOverlay) {
-        bioOverlay.classList.remove('active');
-        bioOverlay.style.display = 'none';
+    function shakePinPad() {
+        const block = document.querySelector('.start-block');
+        if (typeof gsap !== 'undefined') {
+            gsap.fromTo(block, { x: 0 }, { x: [-12, 12, -8, 8, 0], duration: 0.4 });
+        }
+        try {
+            navigator.vibrate?.([50, 30, 50]);
+        } catch (e) {}
     }
-    const startDiv = document.querySelector('.start-div');
-    const main = document.querySelector('.main');
-    if (typeof gsap !== 'undefined') {
-        gsap.timeline()
-            .to(startDiv, { opacity: 0, scale: 0.96, duration: 0.35, ease: 'power2.inOut' })
-            .set(startDiv, { display: 'none' })
-            .fromTo(main, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' })
-            .add(() => {
+
+    function unlockApp() {
+        const bioOverlay = document.getElementById('biometric-overlay');
+        if (bioOverlay) {
+            bioOverlay.classList.remove('active');
+            bioOverlay.style.display = 'none';
+        }
+
+        // 1. Повністю зупиняємо та ховаємо intro-відео logo.mp4
+        const loadPageEl = document.getElementById('loadpage') || document.querySelector('.loadpage');
+        if (loadPageEl) {
+            loadPageEl.classList.add('hidden');
+            loadPageEl.style.display = 'none';
+            loadPageEl.style.pointerEvents = 'none';
+        }
+        const introVideo = document.getElementById('introLogoVideo');
+        if (introVideo) {
+            try {
+                introVideo.pause();
+                introVideo.currentTime = 0;
+            } catch (e) {}
+        }
+
+        // 2. Вмикаємо та запускаємо фонове відео background_gradient.mp4
+        const videoBg = document.getElementById('video-background') || document.querySelector('.video-background');
+        if (videoBg) {
+            videoBg.style.display = 'block';
+        }
+        const bgVideo = document.getElementById('myVideo');
+        if (bgVideo) {
+            bgVideo.muted = true;
+            bgVideo.loop = true;
+            bgVideo.currentTime = 0;
+            const playPromise = bgVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    const retryPlay = () => {
+                        bgVideo.play().catch(() => {});
+                        window.removeEventListener('click', retryPlay);
+                        window.removeEventListener('touchstart', retryPlay);
+                    };
+                    window.addEventListener('click', retryPlay, { once: true });
+                    window.addEventListener('touchstart', retryPlay, { once: true });
+                });
+            }
+        }
+
+        // 3. Перехід від start-div до main
+        const startDiv = document.querySelector('.start-div');
+        const main = document.querySelector('.main');
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(startDiv, { opacity: 0, scale: 0.96, duration: 0.35, ease: 'power2.inOut' })
+                .set(startDiv, { display: 'none' })
+                .fromTo(main, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' })
+                .add(() => {
+                    startDiv.classList.remove('active');
+                    main.classList.add('active');
+                    document.querySelector('.blockStart')?.classList.add('active');
+                });
+        } else {
+            if (startDiv) {
                 startDiv.classList.remove('active');
+                startDiv.style.display = 'none';
+            }
+            if (main) {
                 main.classList.add('active');
-                document.querySelector('.blockStart')?.classList.add('active');
-            });
-    } else {
-        startDiv.classList.remove('active');
-        main.classList.add('active');
-        document.querySelector('.blockStart')?.classList.add('active');
-    }
-}
-
-function vhod(type, digit) {
-    if (type === 'minus') {
-        enteredPin = enteredPin.slice(0, -1);
-        updatePinDots();
-        return;
-    }
-    if (enteredPin.length >= 4) return;
-    enteredPin += digit;
-    updatePinDots();
-    if (enteredPin.length === 4) {
-        if (enteredPin === (typeof entryPin !== 'undefined' ? entryPin : '1234')) {
-            unlockApp();
-        } else {
-            shakePinPad();
-            enteredPin = '';
-            setTimeout(updatePinDots, 400);
+            }
+            document.querySelector('.blockStart')?.classList.add('active');
         }
     }
-}
 
-   document.querySelectorAll('.start-block > button').forEach(function (el) {
-    el.addEventListener('click', function () {
-        if ($(this).attr('data-type') == 'delete') {
+    function vhod(type, digit) {
+        if (type === 'minus') {
+            enteredPin = enteredPin.slice(0, -1);
+            updatePinDots();
+            return;
+        }
+        if (enteredPin.length >= 4) return;
+        enteredPin += String(digit).trim();
+        updatePinDots();
+        if (enteredPin.length === 4) {
+            const correctPin = (typeof entryPin !== 'undefined' && entryPin) ? String(entryPin) : '1234';
+            if (enteredPin === correctPin) {
+                setTimeout(unlockApp, 100);
+            } else {
+                shakePinPad();
+                setTimeout(() => {
+                    enteredPin = '';
+                    updatePinDots();
+                }, 400);
+            }
+        }
+    }
+
+    // Обробники кнопок пін-коду
+    document.querySelectorAll('.start-block > button').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (this.getAttribute('data-type') === 'delete') {
+                vhod('minus');
+            } else {
+                const text = this.innerText || this.textContent;
+                const digit = text.replace(/[^0-9]/g, '');
+                if (digit !== '') {
+                    vhod('plus', digit);
+                }
+            }
+        });
+    });
+
+    // Підтримка введення з фізичної клавіатури
+    window.addEventListener('keydown', function (e) {
+        const startDiv = document.querySelector('.start-div');
+        if (!startDiv || !startDiv.classList.contains('active')) return;
+        if (e.key >= '0' && e.key <= '9') {
+            vhod('plus', e.key);
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
             vhod('minus');
-        } else {
-            vhod('plus', this.textContent.trim());
         }
     });
-});
 
+    // ─────────────────────────────────────────────────────────────
+    // БІОМЕТРИЧНА АВТОРИЗАЦІЯ (Face ID / Touch ID)
+    // ─────────────────────────────────────────────────────────────
     let biometricTimer = null;
     function triggerBiometricAuth(isInitial = false) {
         const overlay = document.getElementById('biometric-overlay');
@@ -5698,10 +5695,7 @@ function vhod(type, digit) {
         void overlay.offsetWidth;
         overlay.classList.add('active');
 
-        // Ensure PIN pad is active underneath
-        $('.start-div').addClass('active');
-
-        // Cancel / Enter PIN handler
+        // Скасування / закриття вікна біометрії
         const dismissBiometric = () => {
             clearTimeout(biometricTimer);
             overlay.classList.remove('active');
@@ -5715,7 +5709,7 @@ function vhod(type, digit) {
         const backdrop = overlay.querySelector('.biometric-backdrop');
         if (backdrop) backdrop.onclick = dismissBiometric;
 
-        // Biometric scan duration (~1.25s)
+        // Тривалість сканування обличчя (~1.25 сек)
         biometricTimer = setTimeout(() => {
             modal.classList.remove('scanning');
             modal.classList.add('success');
@@ -5736,20 +5730,144 @@ function vhod(type, digit) {
         }, 1250);
     }
 
-    document.querySelector('.start-block > img[src*="biometrics"]')?.addEventListener('click', () => {
-        triggerBiometricAuth(false);
-    }); 
+    // Клік по іконці біометрії на клавіатурі
+    const bioBtn = document.getElementById('btn-biometrics');
+    if (bioBtn) {
+        bioBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerBiometricAuth(false);
+        });
+    }
+    document.querySelectorAll('.btn-biometrics, .start-block > img').forEach((img) => {
+        img.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerBiometricAuth(false);
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // ЗАВАНТАЖЕННЯ: ВІДЕО logo.mp4 НА ВЕСЬ ЕКРАН ПЕРЕД ПАРОЛЕМ
+    // ─────────────────────────────────────────────────────────────
+    function startAppLoadingFlow() {
+        const introVideo = document.getElementById('introLogoVideo');
+        const loadPageEl = document.getElementById('loadpage') || document.querySelector('.loadpage');
+        let introFinished = false;
+
+        function transitionToPin() {
+            if (introFinished) return;
+            introFinished = true;
+
+            if (introVideo) {
+                try {
+                    introVideo.pause();
+                } catch (e) {}
+            }
+
+            if (loadPageEl) {
+                loadPageEl.classList.add('fade-out');
+                setTimeout(() => {
+                    loadPageEl.classList.add('hidden');
+                    loadPageEl.style.display = 'none';
+                    loadPageEl.style.pointerEvents = 'none';
+                }, 400);
+            }
+
+            $('.loginpage').fadeIn(1);
+            $('.papage').css('opacity', '1');
+
+            setTimeout(function () {
+                var ves =
+                    ($('.papage > .footer').height() -
+                        $('.papage > .footer > .ft_icons').height()) /
+                    2;
+                $('.zep').css('padding-bottom', ves + 'px');
+                var zaz =
+                    ves + 13 + $('.papage > .footer > .ft_icons').height();
+                $('.menu').css('max-height', 'calc(100% - ' + zaz + 'px)');
+                $('.ok').css('margin-bottom', (ves + 13) * 2 + 'px');
+            }, 100);
+
+            // Показуємо екран введення пароля
+            const startDiv = document.querySelector('.start-div');
+            if (startDiv) {
+                startDiv.classList.add('active');
+                startDiv.style.pointerEvents = 'all';
+            }
+        }
+
+        if (introVideo) {
+            introVideo.addEventListener('ended', transitionToPin);
+            introVideo.addEventListener('error', transitionToPin);
+            loadPageEl?.addEventListener('click', transitionToPin);
+
+            // Страховочний таймаут на випадок, якщо відео заблоковано браузером
+            setTimeout(transitionToPin, 4200);
+
+            const playPromise = introVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    document.body.addEventListener('click', () => {
+                        introVideo.play().catch(transitionToPin);
+                    }, { once: true });
+                });
+            }
+        } else {
+            transitionToPin();
+        }
+
+        // Рядок, що біжить
+        var marquee = $('.line1');
+        if (marquee.length && marquee[0]) {
+            var originalContent = marquee.html();
+            marquee.html(originalContent + originalContent);
+            var contentWidth = marquee[0].scrollWidth / 2;
+            marquee.scrollLeft(contentWidth);
+            marquee.marquee({
+                allowCss3Support: true,
+                css3easing: 'linear',
+                easing: 'linear',
+                delayBeforeStart: 0,
+                direction: 'left',
+                duplicated: true,
+                gap: 5,
+                duration: 5000,
+            });
+        }
+
+        var marquee2 = $('.line2');
+        if (marquee2.length && marquee2[0]) {
+            var originalContent = marquee2.html();
+            marquee2.html(originalContent + originalContent);
+            var contentWidth = marquee2[0].scrollWidth / 2;
+            marquee2.scrollLeft(contentWidth);
+            marquee2.marquee({
+                allowCss3Support: true,
+                css3easing: 'linear',
+                easing: 'linear',
+                delayBeforeStart: 0,
+                direction: 'left',
+                duplicated: true,
+                gap: 50,
+                duration: 15000,
+            });
+        }
+    }
+
+    // Запуск відразу після завантаження DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startAppLoadingFlow);
+    } else {
+        startAppLoadingFlow();
+    } 
 
     document.querySelectorAll('.footer > div').forEach((div) => {
         div.addEventListener('click', function () {
             $('.block.active').removeClass('active');
             const index = Number($(this).attr('data-index')) - 1;
 
-            if (Number($(this).attr('data-index')) == 2) {
-                $('.video-background').addClass('active')
-            } else {
-                $('.video-background').removeClass('active')
-            }
+            // Фонове відео background_gradient.mp4 залишається активним на всіх вкладках
             if (index == 1) {
                 document.querySelector('.main.active').style.display = 'flex'
                 document.querySelector('.main.active').style.flexDirection = 'column'
@@ -5901,36 +6019,72 @@ function vhod(type, digit) {
 
     const cardState = new WeakMap();
 
-function flipCard(sliderEl) {
-    const state = cardState.get(sliderEl) || { flipped: false, animating: false };
-    if (state.animating) return;
-    state.animating = true;
-    sliderEl.classList.add('is-flipping');
-    const next = state.flipped ? 0 : 180;
-    const onDone = () => {
-        state.flipped = !state.flipped;
-        state.animating = false;
-        sliderEl.classList.remove('is-flipping');
-        if (state.flipped) startCardCountdown(sliderEl);
-        else if (cardTimers.has(sliderEl)) {
-            clearInterval(cardTimers.get(sliderEl).interval);
-            cardTimers.delete(sliderEl);
+    function flipCard(sliderEl) {
+        const state = cardState.get(sliderEl) || { flipped: false, animating: false };
+        if (state.animating) return;
+        state.animating = true;
+        sliderEl.classList.add('is-flipping');
+        const next = state.flipped ? 0 : 180;
+        const onDone = () => {
+            state.flipped = !state.flipped;
+            state.animating = false;
+            sliderEl.classList.remove('is-flipping');
+            if (state.flipped) {
+                startCardCountdown(sliderEl);
+            } else if (cardTimers.has(sliderEl)) {
+                clearInterval(cardTimers.get(sliderEl).interval);
+                cardTimers.delete(sliderEl);
+            }
+        };
+        if (typeof gsap !== 'undefined') {
+            gsap.to(sliderEl, {
+                rotateY: next,
+                duration: 0.5,
+                ease: 'power2.inOut',
+                transformPerspective: 1200,
+                onComplete: onDone
+            });
+        } else {
+            anime({
+                targets: sliderEl,
+                rotateY: next,
+                duration: 350,
+                easing: 'easeInOutQuad',
+                complete: onDone
+            });
         }
-    };
-    if (typeof gsap !== 'undefined') {
-        gsap.to(sliderEl, { rotateY: next, duration: 0.55, ease: 'power2.inOut', transformPerspective: 1200, onComplete: onDone });
-    } else {
-        anime({ targets: sliderEl, rotateY: next, duration: 300, easing: 'easeInOutQuad', complete: onDone });
+        cardState.set(sliderEl, state);
     }
-    cardState.set(sliderEl, state);
-}
 
-document.querySelectorAll('.slider').forEach((sliderEl) => {
-    sliderEl.addEventListener('click', function (e) {
-        if (e.target.closest('.qrChange, .copyPng, .moreInfo')) return;
-        flipCard(sliderEl);
+    let isCardSwiping = false;
+    let cardTouchStartX = 0;
+    let cardTouchStartY = 0;
+
+    document.querySelectorAll('.slider').forEach((sliderEl) => {
+        sliderEl.addEventListener('touchstart', function (e) {
+            if (e.touches && e.touches.length > 0) {
+                cardTouchStartX = e.touches[0].clientX;
+                cardTouchStartY = e.touches[0].clientY;
+                isCardSwiping = false;
+            }
+        }, { passive: true });
+
+        sliderEl.addEventListener('touchmove', function (e) {
+            if (e.touches && e.touches.length > 0) {
+                const dx = Math.abs(e.touches[0].clientX - cardTouchStartX);
+                const dy = Math.abs(e.touches[0].clientY - cardTouchStartY);
+                if (dx > 7 || dy > 7) {
+                    isCardSwiping = true;
+                }
+            }
+        }, { passive: true });
+
+        sliderEl.addEventListener('click', function (e) {
+            if (isCardSwiping) return;
+            if (e.target.closest('.qrChange, .copyPng, .moreInfo, button, a')) return;
+            flipCard(sliderEl);
+        });
     });
-});
 
     // ─────────────────────────────────────────────────────────────
     // QR ↔ BARCODE перемикач — ізольований до своєї картки
@@ -6065,36 +6219,52 @@ document.querySelectorAll('.slider').forEach((sliderEl) => {
 
         // Swiper — документи
         if (document.querySelector('.documentSlider')) {
-    new Swiper('.documentSlider', {
-        slidesPerView: 1.12,
-        centeredSlides: true,
-        spaceBetween: 12,
-        speed: 450,
-        grabCursor: true,
-        resistanceRatio: 0.65,
-        touchReleaseOnEdges: true,
-        watchSlidesProgress: true,
-        pagination: {
-            el: '.swiper-pagination',
-            clickable: true,
-            dynamicBullets: true,
-        },
-        on: {
-            setTranslate(swiper) {
-                swiper.slides.forEach(slide => {
-                    const p = slide.progress;
-                    const scale = 1 - Math.min(Math.abs(p) * 0.08, 0.08);
-                    const y = Math.abs(p) * 12;
-                    slide.style.transform = `scale(${scale}) translateY(${y}px)`;
-                });
-            },
-            setTransition(swiper, duration) {
-                swiper.slides.forEach(slide => {
-                    slide.style.transitionDuration = duration + 'ms';
-                });
-            }
+            const docSwiper = new Swiper('.documentSlider', {
+                slidesPerView: 1.1,
+                centeredSlides: true,
+                spaceBetween: 14,
+                speed: 400,
+                grabCursor: true,
+                resistanceRatio: 0.85,
+                touchRatio: 1.1,
+                touchAngle: 45,
+                touchReleaseOnEdges: true,
+                watchSlidesProgress: true,
+                preventClicks: true,
+                preventClicksPropagation: true,
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                    dynamicBullets: true,
+                },
+                on: {
+                    slideChange(swiper) {
+                        // Скидаємо розгорнуті звороти на лицьовий бік при переході між документами
+                        document.querySelectorAll('.slider').forEach(slider => {
+                            const state = cardState.get(slider);
+                            if (state && state.flipped) {
+                                flipCard(slider);
+                            }
+                        });
+                    },
+                    setTranslate(swiper) {
+                        swiper.slides.forEach(slide => {
+                            const p = slide.progress;
+                            const scale = 1 - Math.min(Math.abs(p) * 0.06, 0.08);
+                            const y = Math.abs(p) * 8;
+                            const opacity = 1 - Math.min(Math.abs(p) * 0.2, 0.4);
+                            slide.style.transform = `scale(${scale}) translateY(${y}px)`;
+                            slide.style.opacity = opacity;
+                        });
+                    },
+                    setTransition(swiper, duration) {
+                        swiper.slides.forEach(slide => {
+                            slide.style.transitionDuration = duration + 'ms';
+                        });
+                    }
+                }
+            });
         }
-    });
 
 
         // Swiper — новини
@@ -6104,7 +6274,6 @@ document.querySelectorAll('.slider').forEach((sliderEl) => {
                 spaceBetween: 30,
             });
         }
-    } // end if documentSlider
     }); // end DOMContentLoaded
 
 
