@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <path d="M15 15h10v30H15zm5 0c5 0 10 3 10 10s-5 10-10 10m25-20h-8v30h8c8 0 12-5 12-15s-4-15-12-15z" fill="#000"/>
+  <text x="60" y="28" font-family="sans-serif" font-size="12" font-weight="bold" fill="#000">МІНІСТЕРСТВО</text>
+  <text x="60" y="42" font-family="sans-serif" font-size="10" fill="#333">ЦИФРОВОЇ ТРАНСФОРМАЦІЇ</text>
+</svg>
