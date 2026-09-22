@@ -1,0 +1,6 @@
+{
+  "name": "Дія",
+  "description": "Офіційний застосунок цифрових документів та послуг Дія (демо-симулятор з підтримкою карток, QR-кодів, Дія.AI та редактором даних)",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
