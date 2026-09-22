@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════
+   DIIA PWA — AUTHENTIC PIXEL-PERFECT STYLING
+   ═══════════════════════════════════════════ */
+
 :root {
     --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
     --ios-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -472,125 +476,214 @@ html, body {
     border-bottom: none !important;
 }
 
-/* Document Slider (3D Cards) */
+/* ═══════════════════════════════════════════
+   DOCUMENT CARDS (FIXED & ALIGNED)
+   ═══════════════════════════════════════════ */
+
 .documentSlider {
     width: 100%;
-    height: 520px;
-    max-height: 72vh;
-    perspective: 1200px;
+    height: 480px !important;
+    max-height: 70vh !important;
+    perspective: 1400px;
+    padding: 10px 0;
+    overflow: hidden;
 }
 
 .documentSlider .swiper-slide {
     display: flex;
     justify-content: center;
-    perspective: 1200px;
+    align-items: center;
+    perspective: 1400px;
     height: 100%;
 }
 
 .slider {
-    width: 92%;
-    height: 100%;
+    width: 330px !important;
+    height: 440px !important;
     transform-style: preserve-3d;
     position: relative;
     cursor: pointer;
     user-select: none;
-    transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+    border-radius: 26px;
+    margin: 0 auto !important;
+    box-sizing: border-box;
+    filter: drop-shadow(0 14px 34px rgba(15, 23, 42, 0.18));
 }
 
 .slider.is-flipped {
     transform: rotateY(180deg);
 }
 
+.slider.is-flipping {
+    pointer-events: none;
+}
+
 .front, .back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 22px 18px;
-    border-radius: 24px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 20px 18px 18px 18px !important;
+    border-radius: 26px;
+    box-sizing: border-box;
+    overflow: hidden !important;
 }
 
 .front {
-    background-color: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(145deg, #a8d5ba 0%, #d4edda 50%, #e8f5e9 100%);
     border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #000;
 }
 
 .back {
-    background: #fff;
+    background: #fff !important;
     transform: rotateY(180deg);
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .front > h1 {
-    font-size: 20px;
-    font-weight: 400;
-    margin-bottom: 10px;
+    font-size: 19px !important;
+    font-weight: 700 !important;
+    line-height: 1.15;
+    margin: 0 0 6px 0 !important;
+    flex-shrink: 0;
 }
 
 .dataBlock {
-    display: flex;
-    gap: 16px;
-    margin-top: 5px;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    flex-shrink: 0;
+    margin: 4px 0;
 }
 
-.dataBlock > img {
-    width: 110px;
-    height: 145px;
-    border-radius: 12px;
-    object-fit: cover;
+/* Строгие фиксированные пропорции фото */
+.dataBlock > img, 
+.dataBlock img#imgPassport,
+.dataBlock img#imgStudent,
+.dataBlock img#imgRights,
+.dataBlock img#imgZagran {
+    width: 96px !important;
+    height: 128px !important;
+    min-width: 96px !important;
+    min-height: 128px !important;
+    border-radius: 12px !important;
+    object-fit: cover !important;
     background: #e2e8f0;
+    flex-shrink: 0;
+    border: none !important;
 }
 
 .dataInfo {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    font-size: 13px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
     flex: 1;
+    min-width: 0;
 }
 
 .dataInfo > div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
+    width: 100% !important;
+    margin: 0 !important;
 }
 
 .dataInfoFirst {
-    color: #666;
-    font-size: 11px;
+    color: #555 !important;
+    font-size: 11.5px !important;
+    font-weight: 400 !important;
 }
 
-.fioBlock {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto;
-    padding-top: 10px;
+.dataInfo span:not(.dataInfoFirst) {
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: #000 !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.fioBlock > h2 {
-    font-size: 19px;
-    font-weight: 400;
-    line-height: 1.25;
-}
-
+/* Бегущие строки (marquee) */
 .marquee-inner {
-    display: inline-block;
-    white-space: nowrap;
+    display: inline-flex !important;
+    white-space: nowrap !important;
     animation: diiaMarquee 14s linear infinite;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: #333 !important;
+}
+
+.content.front .line1,
+.content.front .line2 {
+    flex-shrink: 0 !important;
+    margin: 4px -18px !important;
+    width: calc(100% + 36px) !important;
+    overflow: hidden !important;
+    padding: 5px 0 !important;
+    background: rgba(255, 255, 255, 0.3);
 }
 
 @keyframes diiaMarquee {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
+}
+
+/* Нижний блок (ФИО и кнопка меню) */
+.fioBlock {
+    margin-top: auto !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex-shrink: 0;
+}
+
+.fioBlock > h2 {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase;
+    margin: 0 !important;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #000 !important;
+}
+
+/* Кнопка с тремя точками */
+.moreInfo {
+    position: relative !important;
+    bottom: auto !important;
+    right: auto !important;
+    background-color: #000000 !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    padding: 0 !important;
+}
+
+.moreInfo img {
+    filter: brightness(0) invert(1) !important;
+    width: 16px !important;
+    height: 16px !important;
 }
 
 /* QR & Barcode display on back */
