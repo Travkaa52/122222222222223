@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with identification documents data",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full Ukrainian name (ПІБ)"
+        },
+        "rnokpp": {
+          "type": "string",
+          "description": "Tax ID / РНОКПП (10 digits)"
+        },
+        "mainPhoto": {
+          "type": "string",
+          "description": "User photo URL or Base64"
+        },
+        "birthDate": {
+          "type": "string",
+          "description": "Date of birth"
+        },
+        "nomerPasport": {
+          "type": "string",
+          "description": "Passport number"
+        }
+      },
+      "required": ["name", "rnokpp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered citizen profile documents and metadata"
+    }
+  }
+}

@@ -3,22 +3,40 @@
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="viewport"
           content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
     <meta http-equiv="Cache-Control"
           content="no-cache, no-store, must-revalidate" />
-    <meta name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent" />
 
+    <!-- Android & Web App Meta Tags for Native APK Fullscreen Experience -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#000000" />
+
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Дія" />
-    <link rel="icon"
-          type="image/png"
-          href="assets/favicon.png" />
 
-    <link rel="apple-touch-icon-precomposed"
-          href="assets/favicon.png" />
-    <link rel="manifest" href="assets/manifest.json" />
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Multi-size Icons (72x72 to 512x512) -->
+    <link rel="icon" type="image/png" sizes="72x72" href="/icon-72x72.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/icon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/icon-128x128.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="/icon-144x144.png" />
+    <link rel="icon" type="image/png" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="384x384" href="/icon-384x384.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
+
     <title>Дія</title>
 
     <link type="image/x-icon"
@@ -32,6 +50,7 @@
         referrerpolicy="no-referrer"></script>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="app.css" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
 
@@ -41,6 +60,28 @@
     <script src="/assets/jquery.marquee.min.js"
         type="text/javascript"></script>
 
+    <!-- Card styles — load AFTER app.css -->
+    <link rel="stylesheet" href="card_css_patch.css">
+    <link rel="stylesheet" href="firebase_modal.css">
+
+    <!-- DB sync module — load BEFORE app.js -->
+    <script src="db.js"></script>
+
+    <!-- DiyaDB config — load BEFORE app.js, AFTER db.js -->
+    <script>
+      window.__DIYA_CONFIG__ = {
+        mode: 'github_raw',
+        // ← USER MUST REPLACE with their real repo:
+        githubRaw: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/users',
+        cacheTtlMs: 45000,
+        pollIntervalMs: 30000
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        if (typeof DiyaDB !== 'undefined') {
+          DiyaDB.configure(window.__DIYA_CONFIG__);
+        }
+      });
+    </script>
 </head>
 
 <style>
@@ -48,6 +89,44 @@
     --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
     --ios-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+    /* ─── Офлайн банер ───────────────────────── */
+    .offline-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #1e293b;
+        color: #f8fafc;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+        padding: 10px 16px;
+        padding-top: max(10px, env(safe-area-inset-top));
+        z-index: 999999;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        transform: translateY(-100%);
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        letter-spacing: 0.2px;
+        pointer-events: none;
+    }
+
+    .offline-banner.visible {
+        transform: translateY(0);
+    }
+
+    .offline-banner-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f59e0b;
+        box-shadow: 0 0 8px #f59e0b;
+        flex-shrink: 0;
+    }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -1309,6 +1388,10 @@
       data-scroll-lock-filled-gap="true"
       data-scroll-lock-current-fill-gap-method="padding"
       class="bg-start">
+    <div id="offline-banner" class="offline-banner" role="status" aria-live="polite">
+        <span class="offline-banner-dot"></span>
+        <span>Офлайн режим — дані можуть бути застарілими</span>
+    </div>
     <div class="document_block_div pasport_block_div">
         <div>
             <div class="main_block">
@@ -1829,6 +1912,9 @@
             </div>
         </div>
         <div class="block2 block active">
+            <div id="ptr-indicator" class="ptr-indicator">
+                <div class="ptr-spinner"></div>
+            </div>
             <style>
                 .document_block_div {
                     position: fixed;
@@ -3319,15 +3405,15 @@
                             <div class="content front">
                                 <h1>єДокумент</h1>
                                 <div class="dataBlock">
-                                    <img id="imgPassport" src="" alt="" />
+                                    <img id="imgPassport" src="assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Дата народження:</span>
-                                            <span id="birthDate">12.07.1999</span>
+                                            <span id="birthDate">11.06.2009</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">РНОКПП:</span>
-                                            <span id="rnokpp"></span>
+                                            <span id="rnokpp">3997406358</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3354,7 +3440,7 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0">
-                                    <h2 id="name">Тут твоё имя</h2>
+                                    <h2 id="name">КАСЬЯН ДМИТРО ВАЛЕРІЙОВИЧ</h2>
                                     <div class="arrowSvg moreInfo"
                                          data-index="eDoc"
                                          style="
@@ -3434,14 +3520,14 @@
                                                         line-height: 1.4;
                                                         font-size: 15px;
                                                     "
-                                                  class="dataInfoFirst"></span>
+                                                  class="dataInfoFirst">КАСЬЯН ДМИТРО ВАЛЕРІЙОВИЧ</span>
                                         </div>
                                         <div style="
                                                     width: 100%;
                                                     font-size: 13px;
                                                 ">
                                             <span class="dataInfoFirst">Дата народження:</span>
-                                            <span id="birthDate">12.07.1999</span>
+                                            <span id="birthDate">11.06.2009</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3481,7 +3567,7 @@
                                                     margin-top: 0;
                                                     font-weight: 300;
                                                 "
-                                            id="rnokpp"></h2>
+                                            id="rnokpp">3997406358</h2>
                                         <img class="copyPng"
                                              src="assets/copy.png"
                                              alt="" />
@@ -3556,17 +3642,17 @@
                             <div class="content front">
                                 <h1>Паспорт громадянина України</h1>
                                 <div class="dataBlock">
-                                    <img id="imgPassport" src="" alt="" />
+                                    <img id="imgPassport" src="assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Дата народження:</span>
-                                            <span id="birthDate">12.07.1999</span>
+                                            <span id="birthDate">11.06.2009</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">Номер:</span>
                                             <span id="nomerPasport">008759371</span>
                                         </div>
-                                        <img src="sig.png?timestamp=5699246941" alt="" />
+                                        <img src="assets/sig.png?timestamp=5699246941" alt="" />
                                     </div>
                                 </div>
                                 <div class="line1 marquee"
@@ -3589,7 +3675,7 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0">
-                                    <h2 id="name">Тут твоё имя</h2>
+                                    <h2 id="name">КАСЬЯН ДМИТРО ВАЛЕРІЙОВИЧ</h2>
                                     <div class="arrowSvg moreInfo"
                                          data-index="pasport"
                                          style="
@@ -3660,15 +3746,15 @@
                                 <div class="dataBlock">
                                     <div class="dataInfo">
                                         <div style="width: 100%">
-                                            <span class="dataInfoFirst" style="width: 100%" id="univer_dip"></span>
+                                            <span class="dataInfoFirst" style="width: 100%" id="univer_dip">Державний університет "Житомирська політехніка"</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">Дата видачі:</span>
-                                            <span id="dayout_dip"></span>
+                                            <span id="dayout_dip">30.06.2024</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">Спеціальність:</span>
-                                            <span id="special_dip"></span>
+                                            <span id="special_dip">Комп'ютерна інженерія</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3692,9 +3778,8 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0; margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                                    <h2 id="number_dip" style="margin-top: 0; width: unset;">2</h2>
+                                    <h2 id="number_dip" style="margin-top: 0; width: unset;">В24 049581</h2>
                                     <img class="copyPng" src="assets/copy.png" alt="">
-
                                 </div>
                             </div>
 
@@ -3746,17 +3831,17 @@
                             <div class="content front">
                                 <h1 style="width: 0;">International Passport</h1>
                                 <div class="dataBlock">
-                                    <img id="imgZagran" src="" alt="" />
+                                    <img id="imgZagran" src="assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div style="width: 100%">
                                             <span class="dataInfoFirst">Date of birth:</span>
-                                            <span id="birthDate">12.07.1999</span>
+                                            <span id="birthDate">11.06.2009</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">Document number:</span>
-                                            <span id="zagran_number"></span>
+                                            <span id="zagran_number">FT306260</span>
                                         </div>
-                                        <img src="sig.png?timestamp=5699246941" alt="" />
+                                        <img src="assets/sig.png?timestamp=5699246941" alt="" />
                                     </div>
                                 </div>
                                 <div class="line1 marquee"
@@ -3779,7 +3864,7 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0">
-                                    <h2 id="nameEn">Тут твоё имя</h2>
+                                    <h2 id="nameEn">KASYAN DMYTRO</h2>
                                     <div class="arrowSvg moreInfo"
                                          data-index="zagran"
                                          style="
@@ -3850,19 +3935,19 @@
                                     Студентський квиток
                                 </h1>
                                 <div class="dataBlock">
-                                    <img id="imgStudent" src="" alt="" />
+                                    <img id="imgStudent" src="assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Номер:</span>
-                                            <span id="nomerStudy"></span>
+                                            <span id="nomerStudy">00481958</span>
                                         </div>
                                         <div style="width: 100%">
                                             <span class="dataInfoFirst">Дійсний до:</span>
-                                            <span id="diusnuyDoStudy"></span>
+                                            <span id="diusnuyDoStudy">30.06.2027</span>
                                         </div>
                                         <div style="width: 100%">
                                             <span class="dataInfoFirst">Форма навчання:</span>
-                                            <span id="formaStudy"></span>
+                                            <span id="formaStudy">Денна</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3886,7 +3971,7 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0">
-                                    <h2 id="name">Тут твоё имя</h2>
+                                    <h2 id="name">КАСЬЯН ДМИТРО ВАЛЕРІЙОВИЧ</h2>
                                     <div class="arrowSvg moreInfo"
                                          data-index="study"
                                          style="
@@ -3956,26 +4041,23 @@
                                 <h1 style="width: 0">Посвідчення водія</h1>
                                 <div class="dataBlock">
                                     <img id="imgRights"
-                                         src=""
+                                         src="assets/user_photo.jpg"
                                          alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Дата народження:</span>
-
-                                            <span id="birthDate">12.07.1999</span>
+                                            <span id="birthDate">11.06.2009</span>
                                         </div>
                                         <div style="
                                                     width: 100%;
-
                                                 ">
                                             <span class="dataInfoFirst">Категорія:</span>
-                                            <span id="rightsCategories">A, B</span>
+                                            <span id="rightsCategories">A, B, C1</span>
                                         </div>
                                         <div>
                                             <span class="dataInfoFirst">Номер документа:</span>
-                                            <span id="pravaNnumber">Тут твои данные</span>
+                                            <span id="pravaNnumber">KBE968639</span>
                                         </div>
-
 
                                     </div>
                                 </div>
@@ -4003,8 +4085,7 @@
 
                                 <div class="fioBlock"
                                      style="margin-right: 0">
-
-                                    <h2 id="name">Тут Твои Данные</h2>
+                                    <h2 id="name">КАСЬЯН ДМИТРО ВАЛЕРІЙОВИЧ</h2>
                                     <div class="arrowSvg moreInfo"
                                          data-index="prava"
                                          style="
@@ -4108,7 +4189,7 @@
                                             ">
                                         <div style="display: flex; align-items: center; gap: 10px;">
                                             <span id="zbroyaNumber"
-                                                  style="font-size: 26px; font-weight: 300;">0000009965</span>
+                                                  style="font-size: 26px; font-weight: 300;">3997406358</span>
                                             <img class="copyPng"
                                                  src="assets/copy.png"
                                                  alt="" />
@@ -4175,12 +4256,12 @@
                     <!-- ======= /ДОЗВІЛ НА ЗБРОЮ ======= -->
 
                     <div class="swiper-slide">
-                        <div class="slider" style="
+                        <div class="slider add-swap-card-container" style="
                                 display: flex;
                                 flex-direction: column;
                                 gap: 10px;
                             ">
-                            <div style="
+                            <div class="add-doc-card" id="btnOpenAddDoc" style="
                                     display: flex;
                                     align-items: center;
                                     justify-content: center;
@@ -4188,12 +4269,15 @@
                                     height: 100%;
                                     flex-direction: column;
                                     background: rgba(255, 255, 255, 0.4);
+                                    backdrop-filter: blur(16px);
+                                    -webkit-backdrop-filter: blur(16px);
                                     border-radius: 24px;
+                                    cursor: pointer;
                                 ">
                                 <img style="height: 35px;" src="assets/addDocument.png" />
-                                <span style="font-size: 18px;">Додати документ</span>
+                                <span style="font-size: 18px; color: #000;">Додати документ</span>
                             </div>
-                            <div style="
+                            <div class="swap-doc-card" id="btnOpenChangeOrder" style="
                                     display: flex;
                                     align-items: center;
                                     justify-content: center;
@@ -4201,11 +4285,14 @@
                                     height: 100%;
                                     flex-direction: column;
                                     background: rgba(255, 255, 255, 0.4);
+                                    backdrop-filter: blur(16px);
+                                    -webkit-backdrop-filter: blur(16px);
                                     border-radius: 24px;
                                     text-align: center;
+                                    cursor: pointer;
                                 ">
                                 <img style="height: 35px;" src="assets/swapDocument.png" />
-                                <span style="font-size: 18px;">Змінити порядок <br />документів</span>
+                                <span style="font-size: 18px; color: #000;">Змінити порядок <br />документів</span>
                             </div>
 
                         </div>
@@ -4462,11 +4549,12 @@
             <div class="pre">
                 <div class="columnMenu">
                     <div>
-                        <div style="padding: 10px 15px">
+                        <div id="btnOpenNotifications" style="padding: 10px 15px; cursor: pointer;">
                             <img style="width: 24px; height: 24px"
                                  src="assets/email.png"
                                  alt="" />
                             <span>Повідомлення</span>
+                            <span class="notif-badge" id="menuNotifBadge" style="display: none;">0</span>
                         </div>
                     </div>
                     <div>
@@ -4483,7 +4571,7 @@
                     </div>
 
                     <div>
-                        <div class="border">
+                        <div class="border" id="btnOpenSettings" style="cursor: pointer;">
                             <img src="assets/settings.png" alt="" />
                             <span>Налаштування</span>
                         </div>
@@ -4627,7 +4715,7 @@
         }
     }
 
-    var AI_RESPONSES = {
+    var inlineAiResponses = {
         'паспорт': '📋 Паспорт громадянина України (ID-картка) видається терміном на 10 років (для осіб від 18 років). Для оформлення потрібні фото 3×4, довідка про реєстрацію та сплата держмита.',
         'права': '🚗 Водійське посвідчення видається на 10 років. Для отримання вперше потрібно скласти теоретичний та практичний іспит у сервісному центрі МВС.',
         'загран': '🌍 Закордонний паспорт оформлюється на 10 років (для дорослих). Термін виготовлення: стандартний — 20 робочих днів, прискорений — 7 робочих днів.',
@@ -4639,8 +4727,8 @@
 
     function getAiResponse(text) {
         var lc = text.toLowerCase();
-        for (var key in AI_RESPONSES) {
-            if (lc.indexOf(key) !== -1) return AI_RESPONSES[key];
+        for (var key in inlineAiResponses) {
+            if (lc.indexOf(key) !== -1) return inlineAiResponses[key];
         }
         // Fallback responses
         var fallbacks = [
@@ -5500,6 +5588,10 @@
     setTimeout(checkExpiration, 5000);
 })();
 </script>
+<div id="offline-banner" class="offline-banner">
+  <span class="offline-banner-dot"></span>
+  <span>Офлайн режим — дані можуть бути застарілими</span>
+</div>
 </body>
 
 <script type="text/javascript">
@@ -5528,145 +5620,149 @@
     // ─────────────────────────────────────────────────────────────
     // ВІДЕО ЗАВАНТАЖЕННЯ (logo.mp4) ПЕРЕД ВВОДОМ ПАРОЛЯ ТА АВТОРИЗАЦІЯ
     // ─────────────────────────────────────────────────────────────
-    let enteredPin = '';
+    (function () {
+        let inlineEnteredPin = '';
 
-    function updatePinDots() {
-        const dots = document.querySelectorAll('.start-vhod > div');
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i < enteredPin.length);
-        });
-    }
-
-    function shakePinPad() {
-        const block = document.querySelector('.start-block');
-        if (typeof gsap !== 'undefined') {
-            gsap.fromTo(block, { x: 0 }, { x: [-12, 12, -8, 8, 0], duration: 0.4 });
+        function updatePinDots() {
+            const dots = document.querySelectorAll('.start-vhod > div');
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i < inlineEnteredPin.length);
+            });
         }
-        try {
-            navigator.vibrate?.([50, 30, 50]);
-        } catch (e) {}
-    }
+        window.updatePinDots = updatePinDots;
 
-    function unlockApp() {
-        const bioOverlay = document.getElementById('biometric-overlay');
-        if (bioOverlay) {
-            bioOverlay.classList.remove('active');
-            bioOverlay.style.display = 'none';
-        }
-
-        // 1. Повністю зупиняємо та ховаємо intro-відео logo.mp4
-        const loadPageEl = document.getElementById('loadpage') || document.querySelector('.loadpage');
-        if (loadPageEl) {
-            loadPageEl.classList.add('hidden');
-            loadPageEl.style.display = 'none';
-            loadPageEl.style.pointerEvents = 'none';
-        }
-        const introVideo = document.getElementById('introLogoVideo');
-        if (introVideo) {
+        function shakePinPad() {
+            const block = document.querySelector('.start-block');
+            if (typeof gsap !== 'undefined') {
+                gsap.fromTo(block, { x: 0 }, { x: [-12, 12, -8, 8, 0], duration: 0.4 });
+            }
             try {
-                introVideo.pause();
-                introVideo.currentTime = 0;
+                navigator.vibrate?.([50, 30, 50]);
             } catch (e) {}
         }
 
-        // 2. Вмикаємо та запускаємо фонове відео background_gradient.mp4
-        const videoBg = document.getElementById('video-background') || document.querySelector('.video-background');
-        if (videoBg) {
-            videoBg.style.display = 'block';
-        }
-        const bgVideo = document.getElementById('myVideo');
-        if (bgVideo) {
-            bgVideo.muted = true;
-            bgVideo.loop = true;
-            bgVideo.currentTime = 0;
-            const playPromise = bgVideo.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    const retryPlay = () => {
-                        bgVideo.play().catch(() => {});
-                        window.removeEventListener('click', retryPlay);
-                        window.removeEventListener('touchstart', retryPlay);
-                    };
-                    window.addEventListener('click', retryPlay, { once: true });
-                    window.addEventListener('touchstart', retryPlay, { once: true });
-                });
+        function unlockApp() {
+            const bioOverlay = document.getElementById('biometric-overlay');
+            if (bioOverlay) {
+                bioOverlay.classList.remove('active');
+                bioOverlay.style.display = 'none';
             }
-        }
 
-        // 3. Перехід від start-div до main
-        const startDiv = document.querySelector('.start-div');
-        const main = document.querySelector('.main');
-        if (typeof gsap !== 'undefined') {
-            gsap.timeline()
-                .to(startDiv, { opacity: 0, scale: 0.96, duration: 0.35, ease: 'power2.inOut' })
-                .set(startDiv, { display: 'none' })
-                .fromTo(main, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' })
-                .add(() => {
-                    startDiv.classList.remove('active');
-                    main.classList.add('active');
-                    document.querySelector('.blockStart')?.classList.add('active');
-                });
-        } else {
-            if (startDiv) {
-                startDiv.classList.remove('active');
-                startDiv.style.display = 'none';
+            // 1. Повністю зупиняємо та ховаємо intro-відео logo.mp4
+            const loadPageEl = document.getElementById('loadpage') || document.querySelector('.loadpage');
+            if (loadPageEl) {
+                loadPageEl.classList.add('hidden');
+                loadPageEl.style.display = 'none';
+                loadPageEl.style.pointerEvents = 'none';
             }
-            if (main) {
-                main.classList.add('active');
+            const introVideo = document.getElementById('introLogoVideo');
+            if (introVideo) {
+                try {
+                    introVideo.pause();
+                    introVideo.currentTime = 0;
+                } catch (e) {}
             }
-            document.querySelector('.blockStart')?.classList.add('active');
-        }
-    }
 
-    function vhod(type, digit) {
-        if (type === 'minus') {
-            enteredPin = enteredPin.slice(0, -1);
-            updatePinDots();
-            return;
-        }
-        if (enteredPin.length >= 4) return;
-        enteredPin += String(digit).trim();
-        updatePinDots();
-        if (enteredPin.length === 4) {
-            const correctPin = (typeof entryPin !== 'undefined' && entryPin) ? String(entryPin) : '1234';
-            if (enteredPin === correctPin) {
-                setTimeout(unlockApp, 100);
-            } else {
-                shakePinPad();
-                setTimeout(() => {
-                    enteredPin = '';
-                    updatePinDots();
-                }, 400);
+            // 2. Вмикаємо та запускаємо фонове відео background_gradient.mp4
+            const videoBg = document.getElementById('video-background') || document.querySelector('.video-background');
+            if (videoBg) {
+                videoBg.style.display = 'block';
             }
-        }
-    }
-
-    // Обробники кнопок пін-коду
-    document.querySelectorAll('.start-block > button').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (this.getAttribute('data-type') === 'delete') {
-                vhod('minus');
-            } else {
-                const text = this.innerText || this.textContent;
-                const digit = text.replace(/[^0-9]/g, '');
-                if (digit !== '') {
-                    vhod('plus', digit);
+            const bgVideo = document.getElementById('myVideo');
+            if (bgVideo) {
+                bgVideo.muted = true;
+                bgVideo.loop = true;
+                bgVideo.currentTime = 0;
+                const playPromise = bgVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        const retryPlay = () => {
+                            bgVideo.play().catch(() => {});
+                            window.removeEventListener('click', retryPlay);
+                            window.removeEventListener('touchstart', retryPlay);
+                        };
+                        window.addEventListener('click', retryPlay, { once: true });
+                        window.addEventListener('touchstart', retryPlay, { once: true });
+                    });
                 }
             }
-        });
-    });
 
-    // Підтримка введення з фізичної клавіатури
-    window.addEventListener('keydown', function (e) {
-        const startDiv = document.querySelector('.start-div');
-        if (!startDiv || !startDiv.classList.contains('active')) return;
-        if (e.key >= '0' && e.key <= '9') {
-            vhod('plus', e.key);
-        } else if (e.key === 'Backspace' || e.key === 'Delete') {
-            vhod('minus');
+            // 3. Перехід від start-div до main
+            const startDiv = document.querySelector('.start-div');
+            const main = document.querySelector('.main');
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline()
+                    .to(startDiv, { opacity: 0, scale: 0.96, duration: 0.35, ease: 'power2.inOut' })
+                    .set(startDiv, { display: 'none' })
+                    .fromTo(main, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' })
+                    .add(() => {
+                        startDiv.classList.remove('active');
+                        main.classList.add('active');
+                        document.querySelector('.blockStart')?.classList.add('active');
+                    });
+            } else {
+                if (startDiv) {
+                    startDiv.classList.remove('active');
+                    startDiv.style.display = 'none';
+                }
+                if (main) {
+                    main.classList.add('active');
+                }
+                document.querySelector('.blockStart')?.classList.add('active');
+            }
         }
-    });
+        window.unlockApp = unlockApp;
+
+        function vhod(type, digit) {
+            if (type === 'minus') {
+                inlineEnteredPin = inlineEnteredPin.slice(0, -1);
+                updatePinDots();
+                return;
+            }
+            if (inlineEnteredPin.length >= 4) return;
+            inlineEnteredPin += String(digit).trim();
+            updatePinDots();
+            if (inlineEnteredPin.length === 4) {
+                const correctPin = (typeof entryPin !== 'undefined' && entryPin) ? String(entryPin) : '1234';
+                if (inlineEnteredPin === correctPin) {
+                    setTimeout(unlockApp, 100);
+                } else {
+                    shakePinPad();
+                    setTimeout(() => {
+                        inlineEnteredPin = '';
+                        updatePinDots();
+                    }, 400);
+                }
+            }
+        }
+
+        // Обробники кнопок пін-коду
+        document.querySelectorAll('.start-block > button').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (this.getAttribute('data-type') === 'delete') {
+                    vhod('minus');
+                } else {
+                    const text = this.innerText || this.textContent;
+                    const digit = text.replace(/[^0-9]/g, '');
+                    if (digit !== '') {
+                        vhod('plus', digit);
+                    }
+                }
+            });
+        });
+
+        // Підтримка введення з фізичної клавіатури
+        window.addEventListener('keydown', function (e) {
+            const startDiv = document.querySelector('.start-div');
+            if (!startDiv || !startDiv.classList.contains('active')) return;
+            if (e.key >= '0' && e.key <= '9') {
+                vhod('plus', e.key);
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                vhod('minus');
+            }
+        });
+    })();
 
     // ─────────────────────────────────────────────────────────────
     // БІОМЕТРИЧНА АВТОРИЗАЦІЯ (Face ID / Touch ID)
@@ -5688,6 +5784,12 @@
         }
 
         clearTimeout(biometricTimer);
+        if (typeof isBiometricsEnabled === 'function' && !isBiometricsEnabled()) {
+            if (typeof showNotification === 'function') {
+                showNotification('Біометрію вимкнено у налаштуваннях');
+            }
+            return;
+        }
         modal.classList.remove('success');
         modal.classList.add('scanning');
         if (desc) desc.textContent = 'Вхід за допомогою Face ID';
@@ -5976,12 +6078,12 @@
     // ─────────────────────────────────────────────────────────────
     // QR-ТАЙМЕР: кожна картка має свій незалежний інтервал
     // ─────────────────────────────────────────────────────────────
-    const cardTimers = new Map(); // slider-element → { interval, minutes, seconds }
+    const sliderCardTimers = new Map(); // slider-element → { interval, minutes, seconds }
 
     function startCardCountdown(sliderEl) {
         // Зупиняємо попередній таймер цієї картки (якщо є)
-        if (cardTimers.has(sliderEl)) {
-            clearInterval(cardTimers.get(sliderEl).interval);
+        if (sliderCardTimers.has(sliderEl)) {
+            clearInterval(sliderCardTimers.get(sliderEl).interval);
         }
 
         const el = sliderEl.querySelector('.qrcodeBlock > span > span');
@@ -6000,7 +6102,7 @@
             if (seconds < 0) { seconds = 59; minutes--; }
             if (minutes < 0) {
                 clearInterval(interval);
-                cardTimers.delete(sliderEl);
+                sliderCardTimers.delete(sliderEl);
                 el.textContent = '0:00';
                 if (qrEl) qrEl.style.opacity = '0.3';
                 return;
@@ -6014,7 +6116,7 @@
             }
         }, 1000);
 
-        cardTimers.set(sliderEl, { interval, minutes, seconds });
+        sliderCardTimers.set(sliderEl, { interval, minutes, seconds });
     }
 
     const cardState = new WeakMap();
@@ -6031,9 +6133,9 @@
             sliderEl.classList.remove('is-flipping');
             if (state.flipped) {
                 startCardCountdown(sliderEl);
-            } else if (cardTimers.has(sliderEl)) {
-                clearInterval(cardTimers.get(sliderEl).interval);
-                cardTimers.delete(sliderEl);
+            } else if (sliderCardTimers.has(sliderEl)) {
+                clearInterval(sliderCardTimers.get(sliderEl).interval);
+                sliderCardTimers.delete(sliderEl);
             }
         };
         if (typeof gsap !== 'undefined') {
@@ -6407,7 +6509,260 @@
 
     // $('.study').parent('div').remove();
 
-    // Пройдитесь по всем элементам и запустите для каждого обратный отсчёт
+    // Реєстрація Service Worker для кешування App Shell та роботи офлайн
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(function (registration) {
+                    console.log('[SW] ServiceWorker успішно зареєстровано:', registration.scope);
+                })
+                .catch(function (error) {
+                    console.warn('[SW] Помилка реєстрації ServiceWorker:', error);
+                });
+        });
+    }
+
+    // Глобальний слухач мережевого стану (online/offline)
+    (function () {
+        function updateNetworkStatus() {
+            var banner = document.getElementById('offline-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'offline-banner';
+                banner.className = 'offline-banner';
+                banner.setAttribute('role', 'status');
+                banner.setAttribute('aria-live', 'polite');
+                banner.innerHTML = '<span class="offline-banner-dot"></span><span>Офлайн режим — дані можуть бути застарілими</span>';
+                document.body.prepend(banner);
+            }
+            if (!navigator.onLine) {
+                banner.classList.add('visible');
+            } else {
+                banner.classList.remove('visible');
+            }
+        }
+
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateNetworkStatus);
+        } else {
+            updateNetworkStatus();
+        }
+    })();
 </script>
+
+    <!-- Модальне вікно "Додати документ" (Bottom Sheet) -->
+    <div class="add-doc-modal-overlay" id="addDocModal">
+        <div class="add-doc-sheet">
+            <div class="sheet-drag-handle"></div>
+            <div class="add-doc-list">
+                <div class="add-doc-item" data-type="birth-cert">
+                    <span>Свідоцтво про народження</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="child-tax">
+                    <span>Картка платника податків дитини</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="pension">
+                    <span>Пенсійне посвідчення</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="veteran">
+                    <span>Посвідчення ветерана</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="unmarried">
+                    <span>Сертифікат незамуженого</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="vpo">
+                    <span>Довідка ВПО</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="add-doc-item" data-type="akt">
+                    <span>Актовий запис про народження</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+            <button class="add-doc-close-btn" id="btnCloseAddDoc">Закрити</button>
+        </div>
+    </div>
+
+    <!-- Екран "Змінити порядок" (Fullscreen View) -->
+    <div class="change-order-screen" id="changeOrderScreen">
+        <div class="change-order-header">
+            <button class="change-order-back-btn" id="btnBackFromChangeOrder" aria-label="Назад">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </button>
+            <h1 class="change-order-title">Змінити порядок</h1>
+        </div>
+        <div class="change-order-list" id="changeOrderList">
+            <div class="order-item-card" data-doc="eDoc" draggable="true">
+                <span class="order-item-text">єДокумент</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="podatki" draggable="true">
+                <span class="order-item-text">Картка платника податків</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="pasport" draggable="true">
+                <span class="order-item-text">Паспорт громадянина України</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="zagran" draggable="true">
+                <span class="order-item-text">Закордонний паспорт</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="dip" draggable="true">
+                <span class="order-item-text">Диплом бакалавра</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="study" draggable="true">
+                <span class="order-item-text">Студентський квиток</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="prava" draggable="true">
+                <span class="order-item-text">Посвідчення водія</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="order-item-card" data-doc="zbroya" draggable="true">
+                <span class="order-item-text">Дозвіл на зброю</span>
+                <div class="order-item-handle" title="Перетягнути">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер для спливаючих In-App Push-сповіщень -->
+    <div class="inapp-push-container" id="inAppPushContainer"></div>
+
+    <!-- Шторка перегляду всіх сповіщень (Історія пушів) -->
+    <div class="notif-sheet-overlay" id="notifSheetModal">
+        <div class="notif-sheet">
+            <div class="sheet-drag-handle"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <h2 style="font-family: 'e-UkraineHead', sans-serif; font-size: 20px; font-weight: 700; color: #000; margin: 0;">Повідомлення</h2>
+                <button id="btnClearNotifs" style="background: none; border: none; font-size: 13px; color: #64748b; cursor: pointer; text-decoration: underline;">Очистити</button>
+            </div>
+            <div class="notif-history-list" id="notifHistoryList">
+                <!-- Динамічні сповіщення -->
+            </div>
+            <button class="add-doc-close-btn" id="btnCloseNotifSheet">Закрити</button>
+        </div>
+    </div>
+
+    <!-- Шторка «Налаштування» з розділом «Безпека» (Security & Biometrics) -->
+    <div class="settings-sheet-overlay" id="settingsSheetModal">
+        <div class="settings-sheet">
+            <div class="sheet-drag-handle"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h2 style="font-family: 'e-UkraineHead', sans-serif; font-size: 20px; font-weight: 700; color: #000; margin: 0;">Налаштування</h2>
+            </div>
+
+            <div class="settings-section-title">Безпека та авторизація</div>
+            <div class="settings-card">
+                <div class="settings-row">
+                    <div class="settings-row-left">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5z"></path>
+                            </svg>
+                        </div>
+                        <div class="settings-row-info">
+                            <span class="settings-row-label">Біометрична автентифікація</span>
+                            <span class="settings-row-sublabel">Використовувати FaceID / TouchID для швидкого входу</span>
+                        </div>
+                    </div>
+                    <label class="diia-switch">
+                        <input type="checkbox" id="toggleBiometrics">
+                        <span class="diia-switch-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-left">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </div>
+                        <div class="settings-row-info">
+                            <span class="settings-row-label">Вхід за 4-значним PIN</span>
+                            <span class="settings-row-sublabel">Завжди запитувати пін-код як резервний спосіб</span>
+                        </div>
+                    </div>
+                    <label class="diia-switch">
+                        <input type="checkbox" checked disabled>
+                        <span class="diia-switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-section-title">Застосунок</div>
+            <div class="settings-card" style="margin-bottom: 20px;">
+                <div class="settings-row">
+                    <div class="settings-row-left">
+                        <div class="settings-row-info">
+                            <span class="settings-row-label">Синхронізація з DiyaDB</span>
+                            <span class="settings-row-sublabel" id="settingsDbStatus">Активно (локальний стан збережено)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="add-doc-close-btn" id="btnCloseSettingsSheet">Готово</button>
+        </div>
+    </div>
+
+    <!-- Модальне вікно перевірки Firebase Firestore -->
+    <div class="fb-verify-overlay" id="fbVerifyModal">
+        <div class="fb-verify-modal">
+            <div class="fb-verify-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2zm0-10h2v8h-2z"/>
+                </svg>
+            </div>
+            <div class="fb-verify-title">Вхід до Дії</div>
+            <div class="fb-verify-desc">Введіть ваш ідентифікатор замовлення / користувача (наприклад: <b>ord_09b28e36</b>) для завантаження документів</div>
+            
+            <div class="fb-verify-input-group">
+                <label class="fb-verify-input-label" for="fbUserIdInput">Номер замовлення або ID (orders):</label>
+                <input type="text" class="fb-verify-input" id="fbUserIdInput" placeholder="Наприклад: ord_09b28e36" autocomplete="off" />
+            </div>
+
+            <div class="fb-verify-error" id="fbVerifyError">Користувача не знайдено в базі даних</div>
+
+            <button class="fb-verify-submit-btn" id="btnFbVerifyConfirm">
+                <span id="fbVerifyBtnText">Підтвердити</span>
+                <span class="fb-verify-spinner" id="fbVerifySpinner" style="display: none;"></span>
+            </button>
+
+            <button class="fb-verify-skip-btn" id="btnFbVerifySkip" type="button">Продовжити з демо-документами</button>
+        </div>
+    </div>
+
+<script src="app.js"></script>
+<script type="module" src="/src/firebase_auth_sync.js"></script>
 </html>
 
