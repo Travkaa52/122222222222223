@@ -48,3 +48,5 @@ var defaultUserData = {
     special_dip: "122 Комп'ютерні науки",
     number_dip: "В23 049182"
 };
+
+window.defaultUserData = defaultUserData;

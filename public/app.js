@@ -417,7 +417,7 @@ function _refreshAllCards(data) {
     }
 
     if (cfg.hasPhoto && data.mainPhoto) {
-      slider.querySelectorAll('.card-photo').forEach(img => img.src = data.mainPhoto);
+      slider.querySelectorAll('.card-photo, #imgPassport, #imgZagran, #imgStudent, #imgRights').forEach(img => img.src = data.mainPhoto);
     }
   });
 }
@@ -442,16 +442,17 @@ function _rebindCardHandlers() {
 }
 
 function _cardClickHandler(e) {
-  if (this.classList.contains('add-swap-card-container')) return;
+  if (!this || !this.classList || this.classList.contains('add-swap-card-container')) return;
   if (e.target.closest('.card-dots, .qrChange, .copyPng, .moreInfo, .card-copy-btn, button, .action-card-circle, .add-doc-card, .swap-doc-card')) return;
   flipCard(this);
 }
 
 function _dotsClickHandler(e) {
   e.stopPropagation();
-  const index = this.getAttribute('data-index');
+  const index = this?.getAttribute ? this.getAttribute('data-index') : null;
+  if (!index) return;
   const sheet = document.querySelector(`.${index}_block_div`);
-  if (sheet) sheet.classList.add('active');
+  if (sheet?.classList) sheet.classList.add('active');
 }
 
 function _copyHandler(e) {
@@ -650,8 +651,8 @@ let docSwiper = null;
 let newsSwiper = null;
 
 function switchTab(index) {
-  document.querySelectorAll('.block').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.footer > div:not(.nav-btn--ai)').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.block').forEach(b => b?.classList?.remove('active'));
+  document.querySelectorAll('.footer > div:not(.nav-btn--ai)').forEach(btn => btn?.classList?.remove('active'));
   const tabBlocks = [
     document.querySelector('.blockStart'),
     document.querySelector('.block2'),
@@ -659,14 +660,15 @@ function switchTab(index) {
     document.querySelectorAll('.block1')[2]
   ];
   const activeBlock = tabBlocks[index - 1];
-  if (activeBlock) activeBlock.classList.add('active');
+  if (activeBlock?.classList) activeBlock.classList.add('active');
   const activeFooterBtn = document.querySelector(`.footer > div[data-index="${index}"]`);
-  if (activeFooterBtn) activeFooterBtn.classList.add('active');
+  if (activeFooterBtn?.classList) activeFooterBtn.classList.add('active');
   if (index === 2) {
     if (docSwiper) docSwiper.update();
     triggerCardEntranceAnimation();
   }
 }
+window.switchTab = switchTab;
 
 function showNotification(msg, isBotUpdate = false) {
   const notif = document.getElementById('notification');
@@ -682,213 +684,7 @@ function showNotification(msg, isBotUpdate = false) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// СИСТЕМА ІН-АПП ПУШ-СПОВІЩЕНЬ (Імітація надходження послуг/документів)
-// ═══════════════════════════════════════════════════════════════
-const NOTIF_STORAGE_KEY = 'diia_push_notifications_v1';
-let _notificationHistory = [];
-try {
-  _notificationHistory = JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY) || '[]');
-} catch (e) {
-  _notificationHistory = [];
-}
 
-function updateNotificationBadge() {
-  const badge = document.getElementById('menuNotifBadge');
-  if (!badge) return;
-  const count = _notificationHistory.length;
-  if (count > 0) {
-    badge.textContent = count > 99 ? '99+' : count;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-function renderNotificationHistory() {
-  const list = document.getElementById('notifHistoryList');
-  if (!list) return;
-  if (_notificationHistory.length === 0) {
-    list.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 30px 10px; font-size: 14px;">Немає нових повідомлень</div>`;
-    return;
-  }
-  list.innerHTML = _notificationHistory.map(item => `
-    <div class="notif-history-item">
-      <div class="notif-history-item-top">
-        <span class="notif-history-title">${item.title}</span>
-        <span class="notif-history-time">${item.time}</span>
-      </div>
-      <div class="notif-history-desc">${item.body}</div>
-    </div>
-  `).join('');
-}
-
-function triggerInAppPush({ title, body, iconType = 'diia', autoDismissMs = 5000 }) {
-  const container = document.getElementById('inAppPushContainer');
-  if (!container) return;
-
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  const notifObj = {
-    id: Date.now() + Math.random().toString(36).substr(2, 4),
-    title,
-    body,
-    time: timeStr,
-    timestamp: Date.now()
-  };
-
-  _notificationHistory.unshift(notifObj);
-  if (_notificationHistory.length > 30) _notificationHistory.pop();
-  try {
-    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(_notificationHistory));
-  } catch (e) {}
-
-  updateNotificationBadge();
-  renderNotificationHistory();
-
-  // Звуковий / тактильний відгук
-  if (navigator.vibrate) {
-    navigator.vibrate([40, 60, 40]);
-  }
-
-  const card = document.createElement('div');
-  card.className = 'inapp-push-card';
-  card.innerHTML = `
-    <div class="inapp-push-icon-wrap">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-      </svg>
-    </div>
-    <div class="inapp-push-content">
-      <div class="inapp-push-top">
-        <span class="inapp-push-appname">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/></svg>
-          Дія • Зараз
-        </span>
-        <button class="inapp-push-close" aria-label="Закрити">&times;</button>
-      </div>
-      <div class="inapp-push-title">${title}</div>
-      <div class="inapp-push-desc">${body}</div>
-    </div>
-  `;
-
-  let dismissTimeout = null;
-
-  function dismiss() {
-    clearTimeout(dismissTimeout);
-    card.classList.remove('visible');
-    setTimeout(() => {
-      if (card.parentNode) card.parentNode.removeChild(card);
-    }, 400);
-  }
-
-  card.querySelector('.inapp-push-close')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dismiss();
-  });
-
-  card.addEventListener('click', () => {
-    dismiss();
-    openNotificationSheet();
-  });
-
-  container.appendChild(card);
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      card.classList.add('visible');
-    });
-  });
-
-  dismissTimeout = setTimeout(dismiss, autoDismissMs);
-}
-
-function openNotificationSheet() {
-  const modal = document.getElementById('notifSheetModal');
-  if (modal) {
-    renderNotificationHistory();
-    modal.classList.add('active');
-  }
-}
-
-function closeNotificationSheet() {
-  const modal = document.getElementById('notifSheetModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function initPushNotificationSystem() {
-  updateNotificationBadge();
-  renderNotificationHistory();
-
-  document.getElementById('btnOpenNotifications')?.addEventListener('click', openNotificationSheet);
-  document.getElementById('btnCloseNotifSheet')?.addEventListener('click', closeNotificationSheet);
-  document.getElementById('notifSheetModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'notifSheetModal') closeNotificationSheet();
-  });
-
-  document.getElementById('btnClearNotifs')?.addEventListener('click', () => {
-    _notificationHistory = [];
-    try {
-      localStorage.removeItem(NOTIF_STORAGE_KEY);
-    } catch (e) {}
-    updateNotificationBadge();
-    renderNotificationHistory();
-    showNotification('Список повідомлень очищено');
-  });
-
-  // Імітація надходження сповіщень про нові документи та послуги
-  const sampleNotifications = [
-    {
-      title: 'Сертифікат про вакцинацію',
-      body: 'Ваш сертифікат про вакцинацію успішно завантажено в застосунок'
-    },
-    {
-      title: 'єОселя: Статус заявки оновлено',
-      body: 'Банк погодив попередній розгляд вашої заявки на пільгову іпотеку'
-    },
-    {
-      title: 'Оновлення реєстру документів',
-      body: 'Дані ID-картки та РНОКПП успішно синхронізовано з ДРАЦС'
-    },
-    {
-      title: 'Нова послуга в Дії',
-      body: 'Доступна перереєстрація авто онлайн у кілька кліків'
-    },
-    {
-      title: 'Військові облігації',
-      body: 'Виплату за облігацією «Ялта» успішно зараховано на картку єПідтримка'
-    }
-  ];
-
-  // Якщо історія порожня, додати початкове повідомлення
-  if (_notificationHistory.length === 0) {
-    _notificationHistory.push({
-      id: 'init-1',
-      title: 'Ласкаво просимо в Дію',
-      body: 'Усі ваші цифрові документи завжди під рукою та надійно захищені',
-      time: '10:00',
-      timestamp: Date.now() - 3600000
-    });
-    updateNotificationBadge();
-    renderNotificationHistory();
-  }
-
-  // Запуск імітаційного пуша через 5 секунд після запуску для наочності
-  setTimeout(() => {
-    triggerInAppPush(sampleNotifications[0]);
-  }, 5000);
-
-  // Періодичне надходження сповіщень про послуги / оновлення документів (кожні 45 секунд)
-  let notifIndex = 1;
-  setInterval(() => {
-    const nextNotif = sampleNotifications[notifIndex % sampleNotifications.length];
-    notifIndex++;
-    triggerInAppPush(nextNotif);
-  }, 45000);
-}
 
 // ═══════════════════════════════════════════════════════════════
 // СЕКЦІЯ «БЕЗПЕКА» В НАЛАШТУВАННЯХ (Security & Biometrics Toggle)
@@ -1561,7 +1357,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   initTelegramTheme();
   initOfflineWatcher();
   initPullToRefresh();
-  initPushNotificationSystem();
   initSecuritySettings();
 
   await initFromDB();
@@ -1571,9 +1366,6 @@ window.openAiDiia = openAiDiia;
 window.closeAiDiia = closeAiDiia;
 window.sendAiMsg = sendAiMsg;
 window.aiQuick = aiQuick;
-window.triggerInAppPush = triggerInAppPush;
-window.openNotificationSheet = openNotificationSheet;
-window.closeNotificationSheet = closeNotificationSheet;
 window.openSettingsSheet = openSettingsSheet;
 window.closeSettingsSheet = closeSettingsSheet;
 window.isBiometricsEnabled = isBiometricsEnabled;

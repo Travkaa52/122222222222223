@@ -1258,12 +1258,7 @@ html, body {
    Full patch is in card_css_patch.css
    ═══════════════════════════════════════════════ */
 
-/* Neutralize old card markup that card_css_patch.css hides */
-.slider .dataBlock  { display: none !important; }
-.slider .fioBlock   { display: none !important; }
-.slider .front > h1 { display: none !important; }
-.slider .line1,
-.slider .line2      { display: none !important; }
+/* Card patch supplements */
 
 /* Offline banner */
 .offline-banner {

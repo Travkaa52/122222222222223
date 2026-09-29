@@ -1,9 +1,9 @@
 // Service Worker для Дія PWA
 // Precache App Shell + Robust Cache-First для відео і шрифтів + Stale-While-Revalidate для динамічних документів
 
-const CACHE_NAME = 'diia-app-shell-v3';
-const MEDIA_FONTS_CACHE_NAME = 'diia-media-fonts-v3';
-const DOCUMENTS_CACHE_NAME = 'diia-documents-data-v3';
+const CACHE_NAME = 'diia-app-shell-v4';
+const MEDIA_FONTS_CACHE_NAME = 'diia-media-fonts-v4';
+const DOCUMENTS_CACHE_NAME = 'diia-documents-data-v4';
 
 // 1. Критичні ресурси оболонки додатку (App Shell)
 const APP_SHELL_ASSETS = [
@@ -16,6 +16,8 @@ const APP_SHELL_ASSETS = [
   '/assets/logo.mp4',
   '/assets/background_gradient.mp4',
   '/app.css',
+  '/card_css_patch.css',
+  '/firebase_modal.css',
   '/app.js',
   '/main.js',
   '/values.js',

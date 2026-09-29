@@ -1,16 +1,17 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * firebase_auth_sync.js — ES6+ модуль інтеграції Firebase Firestore
+ * firebase_auth_sync.js — Модуль синхронізації Firebase Firestore
  * ═══════════════════════════════════════════════════════════════
- * • Підключення Firebase JS SDK (v9+ modular API)
- * • getDoc з колекції users/{userId}
- * • Кешування в localStorage та авто-підстановка в картки документів
- * • Перевірка оффлайн-режиму при старті (пропуск модалки, якщо дані вже є)
+ * 1. Якщо немає підключення до БД — дані беруться з values.js (defaultUserData)
+ * 2. При підключенні до БД — вивантажує дані конкретного користувача (orders/users),
+ *    зберігає у localStorage та заповнює інтерфейс карток
+ * 3. Реалтайм-оновлення через onSnapshot: коли користувач змінює дані через бота
+ *    в Telegram, клієнт миттєво отримує оновлення саме цього користувача
  * ═══════════════════════════════════════════════════════════════
  */
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 // Ключі для localStorage
 export const STORAGE_KEYS = {
@@ -19,7 +20,10 @@ export const STORAGE_KEYS = {
   AUTH_VERIFIED: 'diia_firestore_verified'
 };
 
-// Конфігурація Firebase (може братися з window або fallback)
+// Колекція для пошуку
+export const FIRESTORE_COLLECTION = 'orders';
+
+// Конфігурація Firebase Firestore
 export const firebaseConfig = window.__FIREBASE_CONFIG__ || {
   apiKey: "AIzaSyCKnnMebKAPmg8E2xXMjRgJAlq1so982v4",
   authDomain: "funssdiaa.firebaseapp.com",
@@ -30,9 +34,9 @@ export const firebaseConfig = window.__FIREBASE_CONFIG__ || {
   measurementId: "G-EZRP8C031L"
 };
 
-// Ініціалізація Firebase App & Firestore
-let app;
-let db;
+// Ініціалізація Firebase App та Firestore
+let app = null;
+let db = null;
 
 try {
   app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
@@ -41,51 +45,109 @@ try {
   console.warn('[Firebase] Помилка ініціалізації SDK:', err);
 }
 
+// Активний слухач реалтайм оновлень (onSnapshot)
+let activeUnsubscribe = null;
+
 /**
- * Оновлює DOM елементи всіх карток документів новими даними користувача
- * Використовує querySelectorAll по класах та ідентифікаторах згідно з ТЗ.
+ * Заповнює всі картки документів та модальні вікна даними користувача.
  *
- * @param {Object} userData - Об'єкт користувача з Firestore (name, rnokpp, mainPhoto, birthDate, тощо)
+ * @param {Object} orderData - Об'єкт користувача (з Firestore або values.js)
  */
-export function populateUIWithUserData(userData) {
-  if (!userData || typeof userData !== 'object') return;
+export function populateUIWithUserData(orderData) {
+  if (!orderData || typeof orderData !== 'object') return;
 
-  const {
-    name,
-    rnokpp,
-    mainPhoto,
-    birthDate,
-    nomerPasport,
-    dateOut,
-    sex,
-    taxDepartment
-  } = userData;
+  // Вилучення полів (підтримка як схеми orders/users з Firestore, так і values.js)
+  const name = orderData.fio || orderData.name || orderData.fullName || orderData.PIB || orderData.textName;
+  const nameEn = orderData.nameEn;
+  const birthDate = orderData.dob || orderData.birthDate || orderData.birthday || orderData.birth_date || orderData.textBirthday;
+  const rnokpp = orderData.rnokpp || orderData.inn || orderData.ipn || orderData.taxId || orderData.textRnokpp;
+  const mainPhoto = orderData.photo || orderData.mainPhoto || orderData.photo_url || orderData.avatar || orderData.photoUrl || orderData.imgUrl;
+  const address = orderData.address || orderData.legalAdress;
+  const nomerPasport = orderData.nomerPasport || orderData.passportNumber || orderData.passport_number;
+  const dateOut = orderData.dateOut || orderData.expiryDate || orderData.passport_expiry;
+  const dateGive = orderData.dateGive;
+  const sex = orderData.sex || orderData.gender;
+  const organ = orderData.organ;
+  const uznr = orderData.uznr;
+  const placeBirth = orderData.placeBirth;
+  const registeredOn = orderData.registeredOn;
 
-  // 1. Оновлення ПІБ (ФИО) у всіх картках
+  const zagran_number = orderData.zagran_number || orderData.zagranNumber;
+  const dateGiveZ = orderData.dateGiveZ;
+  const dateOutZ = orderData.dateOutZ;
+
+  const pravaNnumber = orderData.pravaNnumber || orderData.driverLicense;
+  const rightsCategories = orderData.rightsCategories || orderData.categories;
+  const dateGivePrava = orderData.dateGivePrava;
+  const srokPrav = orderData.srokPrav;
+  const pravaOrgan = orderData.pravaOrgan;
+
+  const nomerStudy = orderData.nomerStudy || orderData.studentId;
+  const vidanoStudy = orderData.vidanoStudy;
+  const diusnuyDoStudy = orderData.diusnuyDoStudy;
+  const formaStudy = orderData.formaStudy;
+  const university = orderData.university;
+  const fakultat = orderData.fakultat;
+
+  const zbroyaType = orderData.zbroyaType;
+  const zbroyaNumber = orderData.zbroyaNumber;
+
+  const stepen_dip = orderData.stepen_dip;
+  const univer_dip = orderData.univer_dip;
+  const dayout_dip = orderData.dayout_dip;
+  const special_dip = orderData.special_dip;
+  const number_dip = orderData.number_dip;
+
+  // 1. ПІБ (ФИО)
   if (name) {
-    // Всі елементи ПІБ за селекторами класів та ID
     document.querySelectorAll('.card-name, .edoc-name, .podatki-name, .pasport-name, #name, #textName').forEach(el => {
       el.textContent = name;
     });
 
-    // Оновлення окремих рядків, якщо ім'я розбито на рядки (наприклад, в єДокумент або картці платника податків)
-    const nameParts = name.trim().split(/\s+/);
-    if (nameParts.length >= 3) {
-      document.querySelectorAll('.user-surname, #userSurname').forEach(el => el.textContent = nameParts[0]);
-      document.querySelectorAll('.user-firstname, #userFirstName').forEach(el => el.textContent = nameParts[1]);
-      document.querySelectorAll('.user-patronymic, #userPatronymic').forEach(el => el.textContent = nameParts[2]);
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      document.querySelectorAll('.user-surname, #userSurname').forEach(el => el.textContent = parts[0]);
+      document.querySelectorAll('.user-firstname, #userFirstName').forEach(el => el.textContent = parts[1]);
+      document.querySelectorAll('.user-patronymic, #userPatronymic').forEach(el => el.textContent = parts[2]);
+    } else if (parts.length === 2) {
+      document.querySelectorAll('.user-surname, #userSurname').forEach(el => el.textContent = parts[0]);
+      document.querySelectorAll('.user-firstname, #userFirstName').forEach(el => el.textContent = parts[1]);
     }
-  }
 
-  // 2. Оновлення РНОКПП (ІПН) у всіх картках
-  if (rnokpp) {
-    document.querySelectorAll('.card-rnokpp, .podatki-rnokpp-val, .edoc-rnokpp-val, #rnokpp, #textRnokpp').forEach(el => {
-      // Підтримка копіювання або текстових вузлів
-      el.textContent = rnokpp;
+    // Оновлення багаторядкового імені (fio-3lines)
+    document.querySelectorAll('.card-fio-3lines').forEach(fioContainer => {
+      const divs = fioContainer.querySelectorAll('div');
+      if (divs.length === 3) {
+        divs[0].textContent = parts[0] || '';
+        divs[1].textContent = parts[1] || '';
+        divs[2].textContent = parts.slice(2).join(' ') || (parts[2] || '');
+      }
     });
   }
 
-  // 3. Оновлення фото користувача у всіх картках документів
+  // 2. Англійське ім'я
+  if (nameEn) {
+    document.querySelectorAll('#nameEn, .card-name-en').forEach(el => el.textContent = nameEn);
+  }
+
+  // 3. Дата народження
+  if (birthDate) {
+    document.querySelectorAll('.card-birthdate, #birthDate, #textBirthday').forEach(el => {
+      el.textContent = birthDate;
+    });
+  }
+
+  // 4. РНОКПП (ІПН)
+  if (rnokpp) {
+    document.querySelectorAll('.card-rnokpp, .card-big-rnokpp, .podatki-rnokpp-val, .edoc-rnokpp-val, #rnokpp, #textRnokpp').forEach(el => {
+      el.textContent = rnokpp;
+    });
+    document.querySelectorAll('[data-copy]').forEach(el => {
+      el.setAttribute('data-copy', rnokpp);
+    });
+  }
+
+  // 5. Фотографія
   if (mainPhoto) {
     document.querySelectorAll('.card-photo, .edoc-photo-img, #imgPassport, #imgStudent, #imgRights, #imgZagran').forEach(img => {
       if (img instanceof HTMLImageElement) {
@@ -94,61 +156,235 @@ export function populateUIWithUserData(userData) {
     });
   }
 
-  // 4. Оновлення дати народження (якщо є в документі Firestore)
-  if (birthDate) {
-    document.querySelectorAll('.card-birthdate, #birthDate, #textBirthday').forEach(el => {
-      el.textContent = birthDate;
+  // 6. Адреса та місце народження
+  if (address) {
+    document.querySelectorAll('.card-address, #address, #userAddress, #legalAdress').forEach(el => {
+      el.textContent = address;
     });
   }
+  if (placeBirth) {
+    document.querySelectorAll('#placeBirth').forEach(el => el.textContent = placeBirth);
+  }
+  if (registeredOn) {
+    document.querySelectorAll('#registeredOn').forEach(el => el.textContent = registeredOn);
+  }
 
-  // 5. Оновлення паспорта (якщо передано)
+  // 7. Паспорт громадянина України
   if (nomerPasport) {
     document.querySelectorAll('#nomerPasport').forEach(el => el.textContent = nomerPasport);
   }
   if (dateOut) {
     document.querySelectorAll('#dateOut').forEach(el => el.textContent = dateOut);
   }
+  if (dateGive) {
+    document.querySelectorAll('#dateGive').forEach(el => el.textContent = dateGive);
+  }
   if (sex) {
     document.querySelectorAll('#sex').forEach(el => el.textContent = sex);
   }
+  if (organ) {
+    document.querySelectorAll('#organ').forEach(el => el.textContent = organ);
+  }
+  if (uznr) {
+    document.querySelectorAll('#uznr').forEach(el => el.textContent = uznr);
+  }
 
-  // Синхронізація з глобальним станом застосунку (якщо присутній app.js)
+  // 8. Закордонний паспорт
+  if (zagran_number) {
+    document.querySelectorAll('#zagran_number').forEach(el => el.textContent = zagran_number);
+  }
+  if (dateGiveZ) {
+    document.querySelectorAll('#dateGiveZ').forEach(el => el.textContent = dateGiveZ);
+  }
+  if (dateOutZ) {
+    document.querySelectorAll('#dateOutZ').forEach(el => el.textContent = dateOutZ);
+  }
+
+  // 9. Посвідчення водія
+  if (pravaNnumber) {
+    document.querySelectorAll('#pravaNnumber').forEach(el => el.textContent = pravaNnumber);
+  }
+  if (rightsCategories) {
+    document.querySelectorAll('#rightsCategories').forEach(el => el.textContent = rightsCategories);
+  }
+  if (dateGivePrava) {
+    document.querySelectorAll('#dateGivePrava').forEach(el => el.textContent = dateGivePrava);
+  }
+  if (srokPrav) {
+    document.querySelectorAll('#srokPrav').forEach(el => el.textContent = srokPrav);
+  }
+  if (pravaOrgan) {
+    document.querySelectorAll('#pravaOrgan').forEach(el => el.textContent = pravaOrgan);
+  }
+
+  // 10. Студентський квиток
+  if (nomerStudy) {
+    document.querySelectorAll('#nomerStudy').forEach(el => el.textContent = nomerStudy);
+  }
+  if (vidanoStudy) {
+    document.querySelectorAll('#vidanoStudy').forEach(el => el.textContent = vidanoStudy);
+  }
+  if (diusnuyDoStudy) {
+    document.querySelectorAll('#diusnuyDoStudy').forEach(el => el.textContent = diusnuyDoStudy);
+  }
+  if (formaStudy) {
+    document.querySelectorAll('#formaStudy').forEach(el => el.textContent = formaStudy);
+  }
+  if (university) {
+    document.querySelectorAll('#university').forEach(el => el.textContent = university);
+  }
+  if (fakultat) {
+    document.querySelectorAll('#fakultat').forEach(el => el.textContent = fakultat);
+  }
+
+  // 11. Дозвіл на зброю
+  if (zbroyaType) {
+    document.querySelectorAll('#zbroyaType').forEach(el => el.textContent = zbroyaType);
+  }
+  if (zbroyaNumber) {
+    document.querySelectorAll('#zbroyaNumber').forEach(el => el.textContent = zbroyaNumber);
+  }
+
+  // 12. Диплом
+  if (stepen_dip) {
+    document.querySelectorAll('#stepen_dip').forEach(el => el.textContent = stepen_dip);
+  }
+  if (univer_dip) {
+    document.querySelectorAll('#univer_dip').forEach(el => el.textContent = univer_dip);
+  }
+  if (dayout_dip) {
+    document.querySelectorAll('#dayout_dip').forEach(el => el.textContent = dayout_dip);
+  }
+  if (special_dip) {
+    document.querySelectorAll('#special_dip').forEach(el => el.textContent = special_dip);
+  }
+  if (number_dip) {
+    document.querySelectorAll('#number_dip').forEach(el => el.textContent = number_dip);
+  }
+
+  // Синхронізація з глобальним станом
   if (window.APP_DATA) {
-    Object.assign(window.APP_DATA, userData);
+    Object.assign(window.APP_DATA, orderData);
   }
   if (typeof window.applyDataToDOM === 'function') {
-    window.applyDataToDOM(userData);
+    window.applyDataToDOM(orderData);
   }
 }
 
 /**
- * Отримує документ користувача з колекції users/{userId} у Firestore
+ * Отримує документ з колекції orders/{orderId} або users/{orderId} у Firestore
  *
- * @param {string} userId - Ідентифікатор користувача
- * @returns {Promise<Object|null>} Дані користувача або null, якщо не знайдено
+ * @param {string} orderId - Ідентифікатор замовлення або користувача
+ * @returns {Promise<Object|null>} Дані документа або null
  */
-export async function fetchUserFromFirestore(userId) {
-  if (!userId || typeof userId !== 'string') {
-    throw new Error('Не вказано коректний userId');
+export async function fetchUserFromFirestore(orderId) {
+  if (!orderId || typeof orderId !== 'string') {
+    throw new Error('Вкажіть коректний ID замовлення');
   }
 
   if (!db) {
-    throw new Error('Firebase Firestore не ініціалізовано');
+    throw new Error('Firestore не ініціалізовано');
   }
 
-  const cleanUserId = userId.trim();
-  const userDocRef = doc(db, 'users', cleanUserId);
-  const docSnap = await getDoc(userDocRef);
+  const cleanId = orderId.trim();
 
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
-  } else {
-    return null;
+  // 1. Пошук у колекції orders
+  try {
+    const orderDocRef = doc(db, 'orders', cleanId);
+    const orderSnap = await getDoc(orderDocRef);
+
+    if (orderSnap.exists()) {
+      return { id: orderSnap.id, ...orderSnap.data() };
+    }
+  } catch (err) {
+    console.warn('[Firebase] Помилка getDoc orders:', err);
+    throw err;
+  }
+
+  // 2. Fallback: пошук у колекції users
+  try {
+    const userDocRef = doc(db, 'users', cleanId);
+    const userSnap = await getDoc(userDocRef);
+
+    if (userSnap.exists()) {
+      return { id: userSnap.id, ...userSnap.data() };
+    }
+  } catch (err) {
+    console.warn('[Firebase] Fallback getDoc users помилка:', err);
+  }
+
+  return null;
+}
+
+/**
+ * Запускає реалтайм-слухач (onSnapshot) для конкретного користувача/замовлення.
+ * Коли користувач змінює дані в базі даних через бота в Telegram,
+ * клієнт миттєво отримує оновлення, зберігає у localStorage та оновлює UI.
+ *
+ * @param {string} orderId - Ідентифікатор замовлення / користувача
+ */
+export function startRealtimeSync(orderId) {
+  if (!orderId || typeof orderId !== 'string' || !db) return;
+
+  const cleanId = orderId.trim();
+
+  // Зупиняємо попередній слухач якщо був
+  if (activeUnsubscribe) {
+    activeUnsubscribe();
+    activeUnsubscribe = null;
+  }
+
+  console.log('[Firebase Realtime] Підключення слухача onSnapshot для:', cleanId);
+
+  try {
+    const orderRef = doc(db, 'orders', cleanId);
+
+    activeUnsubscribe = onSnapshot(orderRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const freshData = { id: docSnap.id, ...docSnap.data() };
+        console.log('[Firebase Realtime] Отримано оновлення з orders:', freshData);
+
+        // Зберігаємо свіжі дані в localStorage
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(freshData));
+        localStorage.setItem(STORAGE_KEYS.USER_ID, cleanId);
+        localStorage.setItem(STORAGE_KEYS.AUTH_VERIFIED, 'true');
+
+        // Оновлюємо інтерфейс карток
+        populateUIWithUserData(freshData);
+
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('✓ Дані оновлено через бота');
+        }
+      } else {
+        // Якщо в orders немає, перевіряємо users/{cleanId}
+        const userRef = doc(db, 'users', cleanId);
+        activeUnsubscribe = onSnapshot(userRef, (userSnap) => {
+          if (userSnap.exists()) {
+            const freshUserData = { id: userSnap.id, ...userSnap.data() };
+            console.log('[Firebase Realtime] Отримано оновлення з users:', freshUserData);
+
+            localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(freshUserData));
+            localStorage.setItem(STORAGE_KEYS.USER_ID, cleanId);
+            localStorage.setItem(STORAGE_KEYS.AUTH_VERIFIED, 'true');
+
+            populateUIWithUserData(freshUserData);
+
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('✓ Дані оновлено через бота');
+            }
+          }
+        }, (err) => console.warn('[Firebase Realtime] User listener error:', err));
+      }
+    }, (err) => {
+      console.warn('[Firebase Realtime] Orders listener error:', err);
+    });
+  } catch (err) {
+    console.warn('[Firebase Realtime] Не вдалося запустити onSnapshot:', err);
   }
 }
 
 /**
- * Керування модальним вікном верифікації
+ * Клас керування модальним вікном верифікації
  */
 export class FirebaseVerificationUI {
   constructor() {
@@ -160,10 +396,10 @@ export class FirebaseVerificationUI {
     this.btnText = document.getElementById('fbVerifyBtnText');
     this.spinner = document.getElementById('fbVerifySpinner');
 
-    this.initListeners();
+    this.bindEvents();
   }
 
-  initListeners() {
+  bindEvents() {
     if (this.confirmBtn) {
       this.confirmBtn.addEventListener('click', () => this.handleConfirm());
     }
@@ -181,8 +417,12 @@ export class FirebaseVerificationUI {
     if (this.skipBtn) {
       this.skipBtn.addEventListener('click', () => {
         this.close();
+        // Якщо користувач пропустив — залишаємо стандартні дані з values.js
+        if (typeof window.defaultUserData !== 'undefined') {
+          populateUIWithUserData(window.defaultUserData);
+        }
         if (typeof window.showNotification === 'function') {
-          window.showNotification('Використовуються локальні демо-документи');
+          window.showNotification('Використовуються стандартні дані з values.js');
         }
       });
     }
@@ -192,7 +432,7 @@ export class FirebaseVerificationUI {
     if (this.overlay) {
       this.overlay.classList.add('active');
       if (this.input) {
-        setTimeout(() => this.input.focus(), 200);
+        setTimeout(() => this.input.focus(), 250);
       }
     }
   }
@@ -203,9 +443,9 @@ export class FirebaseVerificationUI {
     }
   }
 
-  showError(message) {
+  showError(msg) {
     if (this.errorEl) {
-      this.errorEl.textContent = message || 'Користувача не знайдено в базі даних';
+      this.errorEl.textContent = msg || 'Користувача не знайдено в базі даних';
       this.errorEl.classList.add('active');
     }
   }
@@ -226,7 +466,7 @@ export class FirebaseVerificationUI {
   async handleConfirm() {
     const rawVal = this.input ? this.input.value.trim() : '';
     if (!rawVal) {
-      this.showError('Будь ласка, введіть userId');
+      this.showError('Будь ласка, введіть ID замовлення (наприклад: ord_09b28e36)');
       return;
     }
 
@@ -236,43 +476,41 @@ export class FirebaseVerificationUI {
     try {
       let userData = null;
 
-      // Спроба виконати реальний запит до Firestore getDoc
       try {
         userData = await fetchUserFromFirestore(rawVal);
-      } catch (networkOrConfigErr) {
-        console.warn('[Firebase] Помилка getDoc з Firestore:', networkOrConfigErr);
-        // Якщо проект ще не зв'язаний з реальними креденшелами хмари,
-        // перевіряємо також збережені в демо-базі записи або повертаємо помилку
-        if (networkOrConfigErr.code === 'permission-denied' || networkOrConfigErr.message?.includes('offline') || networkOrConfigErr.message?.includes('API key')) {
-          this.showError('Помилка підключення до Firestore або відхилено доступ');
-          this.setLoading(false);
-          return;
-        }
-        throw networkOrConfigErr;
+      } catch (err) {
+        console.warn('[Firebase] getDoc error:', err);
+        this.showError(err.message || 'Помилка підключення до Firebase Firestore');
+        this.setLoading(false);
+        return;
       }
 
       if (userData) {
-        // Успішно знайдено: збереження в localStorage
+        // Успішно знайдено:
+        // 1. Збереження в localStorage
         localStorage.setItem(STORAGE_KEYS.USER_ID, rawVal);
         localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
         localStorage.setItem(STORAGE_KEYS.AUTH_VERIFIED, 'true');
 
-        // Підстановка в UI карток документів
+        // 2. Заповнення UI карток документів
         populateUIWithUserData(userData);
 
-        // Закриття модального вікна
+        // 3. Запуск реалтайм-слухача для цього користувача (Telegram bot updates)
+        startRealtimeSync(rawVal);
+
+        // 4. Закриття модалки
         this.close();
 
         if (typeof window.showNotification === 'function') {
-          window.showNotification(`Документи користувача ${userData.name || rawVal} завантажено ✓`);
+          const displayName = userData.fio || userData.name || rawVal;
+          window.showNotification(`Документи замовлення ${displayName} завантажено ✓`);
         }
       } else {
-        // Не знайдено: виведення помилки в модальному вікні
-        this.showError(`Користувача з ID "${rawVal}" не знайдено`);
+        // Не знайдено: виведення помилки у модальному вікні
+        this.showError(`Замовлення з ID "${rawVal}" не знайдено в базі даних`);
       }
     } catch (err) {
-      console.error('[Firebase Verification]', err);
-      this.showError('Помилка перевірки: ' + (err.message || 'Спробуйте пізніше'));
+      this.showError('Помилка: ' + (err.message || 'Не вдалося виконати запит'));
     } finally {
       this.setLoading(false);
     }
@@ -281,27 +519,41 @@ export class FirebaseVerificationUI {
 
 /**
  * Ініціалізація та оффлайн-режим:
- * При старті застосунку перевіряємо localStorage.
- * Якщо дані вже є — одразу заповнюємо UI і НЕ показуємо вікно верифікації.
+ * 1. Якщо даних немає або немає підключення — спочатку застосовуємо values.js (defaultUserData).
+ * 2. Якщо в localStorage вже є збережені дані верифікованого користувача — заповнюємо UI,
+ *    підключаємо реалтайм слухач та не показуємо модалку.
+ * 3. Перевіряємо URL параметри (?uid=... або ?orderId=...).
  */
-export function initFirebaseAuthSync() {
+export async function initFirebaseAuthSync() {
   const ui = new FirebaseVerificationUI();
 
-  // Експорт у window для можливості виклику з адмінки або консолі
+  // Глобальний доступ
   window.fbVerificationUI = ui;
   window.populateUIWithUserData = populateUIWithUserData;
   window.fetchUserFromFirestore = fetchUserFromFirestore;
+  window.startRealtimeSync = startRealtimeSync;
 
+  // 1. Первинне заповнення даними з values.js (fallback за замовчуванням)
+  if (typeof window.defaultUserData !== 'undefined' && window.defaultUserData) {
+    populateUIWithUserData(window.defaultUserData);
+  }
+
+  // 2. Перевірка кешу localStorage
   try {
     const cachedDataStr = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+    const cachedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
     const isVerified = localStorage.getItem(STORAGE_KEYS.AUTH_VERIFIED);
 
     if (cachedDataStr && isVerified === 'true') {
       const cachedData = JSON.parse(cachedDataStr);
-      if (cachedData && (cachedData.name || cachedData.rnokpp)) {
-        console.log('[Firebase Sync] Знайдено кешовані дані в localStorage, застосовуємо до UI');
-        // Одразу заповнюємо UI без показу модалки
+      if (cachedData && (cachedData.name || cachedData.fio || cachedData.rnokpp)) {
+        console.log('[Firebase Sync] Завантажено дані користувача з localStorage');
         populateUIWithUserData(cachedData);
+
+        // Запуск реалтайм-слухача для оновлень з бота в Telegram
+        if (cachedUserId) {
+          startRealtimeSync(cachedUserId);
+        }
         return;
       }
     }
@@ -309,14 +561,52 @@ export function initFirebaseAuthSync() {
     console.warn('[Firebase Sync] Помилка читання localStorage:', err);
   }
 
-  // Якщо даних немає — відкриваємо модалку верифікації
-  // Даємо 500мс для завершення рендеру DOM
+  // 3. Перевірка URL параметрів (?uid=..., ?orderId=..., ?order=...)
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramId = urlParams.get('uid') || urlParams.get('orderId') || urlParams.get('order');
+
+  if (paramId) {
+    console.log('[Firebase Sync] Знайдено ID в URL параметрах:', paramId);
+    try {
+      const remoteData = await fetchUserFromFirestore(paramId);
+      if (remoteData) {
+        localStorage.setItem(STORAGE_KEYS.USER_ID, paramId);
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(remoteData));
+        localStorage.setItem(STORAGE_KEYS.AUTH_VERIFIED, 'true');
+
+        populateUIWithUserData(remoteData);
+        startRealtimeSync(paramId);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Firebase Sync] Автоматичне завантаження за URL параметром не вдалося:', e);
+    }
+  }
+
+  // 4. Якщо даних у кеші немає — показуємо модальне вікно для вводу ID
   setTimeout(() => {
     ui.show();
-  }, 500);
+  }, 450);
 }
 
-// Автоматичний запуск після завантаження сторінки
+// Слухач видимості вкладки: коли користувач повертається з Telegram у PWA,
+// ми перевіряємо актуальність даних конкретного користувача
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    const currentUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+    if (currentUserId && db) {
+      try {
+        const fresh = await fetchUserFromFirestore(currentUserId);
+        if (fresh) {
+          localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(fresh));
+          populateUIWithUserData(fresh);
+        }
+      } catch (e) {}
+    }
+  }
+});
+
+// Запуск
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initFirebaseAuthSync);
 } else {
