@@ -1,11 +1,11 @@
 /**
  * ╔══════════════════════════════════════════════════════╗
- * ║  db.js — синхронізація ПВА з БД через Telegram бота ║
+ * ║  db.js — синхронізація ПВА з БД через Telegram бота  ║
  * ╠══════════════════════════════════════════════════════╣
- * ║  Архітектура:                                        ║
+ * ║  Архітектура:                                       ║
  * ║  Telegram Bot (Python/Node) <-> GitHub Actions       ║
- * ║  <- JSON файл у репо по userId ->                    ║
- * ║  ПВА при старті: GET /api/user?uid={tgId}            ║
+ * ║  <- JSON файл у репо по userId ->                   ║
+ * ║  ПВА при старті: GET /api/user?uid={tgId}           ║
  * ║  Бот при /set: POST /api/user  body={uid, field, v}  ║
  * ║                                                      ║
  * ║  Або через GitHub Actions + GitHub Pages JSON:       ║
@@ -18,28 +18,25 @@
   'use strict';
 
   // ────────────────────────────────────────────────────
-  // 🔧  НАЛАШТУЙ ЦЕ ПІД СВІЙ РЕПОЗИТОРІЙ / API
+  // 🔧 НАЛАШТУВАННЯ ЗА ЗАМОВЧУВАННЯМ
   // ────────────────────────────────────────────────────
   const DB_CONFIG = {
-    // Варіант A: raw GitHub JSON (GitHub Actions генерує файл)
-    // Бот: пише users/{userId}.json у репо через GitHub API
-    // ПВА: читає його напряму
+    // Варіант A: raw GitHub JSON ('github_raw')
+    // Варіант B: Власний API / Cloudflare Workers ('api')
     mode: 'github_raw',   // 'github_raw' | 'api'
 
     // Для mode = 'github_raw'
     githubRaw: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/users',
 
-    // Для mode = 'api' (свій сервер / Cloudflare Workers / Vercel)
+    // Для mode = 'api'
     apiBase: 'https://your-api.vercel.app/api',
 
-    // Скільки тримати кеш (мс)
+    // Скільки тримати кеш у пам'яті (мс)
     cacheTtlMs: 60_000,
 
-    // Поле в Telegram WebApp InitData де uid
-    // Якщо запускається поза Telegram — fallback
+    // Fallback ID для тестування поза Telegram WebApp
     fallbackUserId: 'demo_user',
   };
-  // ────────────────────────────────────────────────────
 
   /* ════════════════════════════════════════════════════
      1. Отримання userId з Telegram WebApp або URL param
@@ -50,7 +47,9 @@
       if (tg?.initDataUnsafe?.user?.id) {
         return String(tg.initDataUnsafe.user.id);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[DB] Telegram WebApp context unavailable:', e);
+    }
 
     // Fallback: ?uid=123 у URL (для тестування)
     const urlUid = new URLSearchParams(location.search).get('uid');
@@ -69,7 +68,7 @@
   async function loadUserData() {
     _uid = _uid || getTelegramUserId();
 
-    // Перевіряємо кеш
+    // Перевіряємо кеш у пам'яті
     if (_cache && (Date.now() - _cacheTime) < DB_CONFIG.cacheTtlMs) {
       return _cache;
     }
@@ -94,42 +93,49 @@
         }
       }
     } catch (e) {
-      console.warn('[DB] Не вдалося завантажити дані:', e);
+      console.warn('[DB] Не вдалося завантажити дані з мережі:', e);
     }
 
     if (data) {
       _cache = data;
       _cacheTime = Date.now();
-      // Зберігаємо локально як fallback
-      try { localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(data)); } catch (e) {}
+      // Зберігаємо локально як резервну копію
+      try {
+        localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(data));
+      } catch (e) {
+        console.warn('[DB] Не вдалося зберегти у localStorage:', e);
+      }
     } else {
-      // Використовуємо локальний кеш якщо сервер недоступний
+      // Використовуємо локальний кеш якщо мережа недоступна
       try {
         const local = localStorage.getItem('diya_db_cache_' + _uid);
-        if (local) _cache = JSON.parse(local);
-      } catch (e) {}
+        if (local) {
+          _cache = JSON.parse(local);
+          console.log('[DB] Завантажено локальні дані з кешу');
+        }
+      } catch (e) {
+        console.warn('[DB] Помилка читання з localStorage:', e);
+      }
     }
 
     return _cache;
   }
 
   /* ════════════════════════════════════════════════════
-     3. Збереження поля через API (якщо потрібно з ПВА)
-        Зазвичай зміни йдуть через бота, але залишаємо
-        можливість прямого запису
+     3. Збереження окремого поля
      ════════════════════════════════════════════════════ */
   async function saveField(field, value) {
     _uid = _uid || getTelegramUserId();
 
-    // Завжди зберігаємо в локальний кеш DiyaDB
     if (!_cache) _cache = {};
     _cache[field] = value;
+    _cacheTime = Date.now();
+
     try {
       localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(_cache));
     } catch (e) {}
 
     if (DB_CONFIG.mode !== 'api') {
-      // github_raw — локально стан збережено
       return true;
     }
 
@@ -149,83 +155,31 @@
   }
 
   /* ════════════════════════════════════════════════════
-     4. Polling — перевіряємо зміни кожні N секунд
-        (бот змінив дані — ПВА оновиться без перезавантаження)
+     4. Масове збереження полів (saveAllFields)
      ════════════════════════════════════════════════════ */
-  let _pollingInterval = null;
-
-  function startPolling(intervalMs = 30_000, onUpdate) {
-    if (_pollingInterval) clearInterval(_pollingInterval);
-    _pollingInterval = setInterval(async () => {
-      const prevJson = JSON.stringify(_cache);
-      _cacheTime = 0; // примусово скидаємо кеш для свіжого запиту
-      try {
-        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('syncing');
-        const fresh = await loadUserData();
-        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
-        if (fresh && JSON.stringify(fresh) !== prevJson) {
-          console.log('[DB] Дані оновлено з сервера/бота');
-          if (typeof onUpdate === 'function') onUpdate(fresh);
-        }
-      } catch (err) {
-        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('error');
-      }
-    }, intervalMs);
-  }
-
-  function stopPolling() {
-    if (_pollingInterval) { clearInterval(_pollingInterval); _pollingInterval = null; }
-  }
-
-  /* ════════════════════════════════════════════════════
-     5. WebSocket / SSE (опціонально, якщо API підтримує)
-        Бот надсилає -> сервер пушить -> ПВА оновлює
-     ════════════════════════════════════════════════════ */
-  let _sse = null;
-
-  function connectSSE(onUpdate) {
-    if (DB_CONFIG.mode !== 'api') {
-      startPolling(30_000, onUpdate);
-      return;
-    }
-    try {
-      _uid = _uid || getTelegramUserId();
-      _sse = new EventSource(`${DB_CONFIG.apiBase}/stream?uid=${_uid}`);
-      _sse.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data && typeof data === 'object') {
-            _cache = { ..._cache, ...data };
-            _cacheTime = Date.now();
-            if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
-            if (typeof onUpdate === 'function') onUpdate(_cache);
-          }
-        } catch (err) {}
-      };
-      _sse.onerror = () => {
-        _sse?.close();
-        // Якщо SSE відвалилось — fallback на polling
-        startPolling(15_000, onUpdate);
-      };
-    } catch (e) {
-      startPolling(30_000, onUpdate);
-    }
-  }
-
   async function saveAllFields(fieldsObj) {
-    const uid = getTelegramUserId();
+    _uid = _uid || getTelegramUserId();
+
+    if (!_cache) _cache = {};
+    Object.assign(_cache, fieldsObj);
+    _cacheTime = Date.now();
+
+    try {
+      localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(_cache));
+    } catch (e) {}
+
     if (DB_CONFIG.mode !== 'api') {
-      console.warn('[DB] saveAllFields requires mode:"api". Use bot to update github_raw.');
-      return false;
+      console.info('[DB] saveAllFields: збережено локально (режим github_raw)');
+      return true;
     }
+
     try {
       const res = await fetch(`${DB_CONFIG.apiBase}/user/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, fields: fieldsObj }),
+        body: JSON.stringify({ uid: _uid, fields: fieldsObj }),
       });
       if (res.ok) {
-        if (_cache) Object.assign(_cache, fieldsObj);
         return true;
       }
     } catch (e) {
@@ -235,26 +189,112 @@
   }
 
   /* ════════════════════════════════════════════════════
-     6. Публічне API модуля
+     5. Polling (періодична перевірка оновлень)
+     ════════════════════════════════════════════════════ */
+  let _pollingInterval = null;
+
+  function startPolling(intervalMs = 30_000, onUpdate) {
+    if (_pollingInterval) clearInterval(_pollingInterval);
+    _pollingInterval = setInterval(async () => {
+      const prevJson = JSON.stringify(_cache);
+      _cacheTime = 0; // Скидаємо таймер кешу для примусового фетчу
+
+      try {
+        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('syncing');
+        const fresh = await loadUserData();
+        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
+
+        if (fresh && JSON.stringify(fresh) !== prevJson) {
+          console.log('[DB] Виявлено нові дані з сервера/бота');
+          if (typeof onUpdate === 'function') onUpdate(fresh);
+        }
+      } catch (err) {
+        if (typeof global.setAllSyncing === 'function') global.setAllSyncing('error');
+      }
+    }, intervalMs);
+  }
+
+  function stopPolling() {
+    if (_pollingInterval) {
+      clearInterval(_pollingInterval);
+      _pollingInterval = null;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════
+     6. Server-Sent Events (SSE)
+     ════════════════════════════════════════════════════ */
+  let _sse = null;
+
+  function disconnectSSE() {
+    if (_sse) {
+      _sse.close();
+      _sse = null;
+    }
+  }
+
+  function connectSSE(onUpdate) {
+    disconnectSSE();
+
+    if (DB_CONFIG.mode !== 'api') {
+      startPolling(30_000, onUpdate);
+      return;
+    }
+
+    try {
+      _uid = _uid || getTelegramUserId();
+      _sse = new EventSource(`${DB_CONFIG.apiBase}/stream?uid=${_uid}`);
+
+      _sse.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data && typeof data === 'object') {
+            _cache = { ..._cache, ...data };
+            _cacheTime = Date.now();
+            if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
+            if (typeof onUpdate === 'function') onUpdate(_cache);
+          }
+        } catch (err) {
+          console.warn('[DB] SSE JSON parse error:', err);
+        }
+      };
+
+      _sse.onerror = () => {
+        disconnectSSE();
+        // При розриві SSE переходимо на резервний фоновий polling
+        startPolling(15_000, onUpdate);
+      };
+    } catch (e) {
+      startPolling(30_000, onUpdate);
+    }
+  }
+
+  /* ════════════════════════════════════════════════════
+     7. Публічний інтерфейс
      ════════════════════════════════════════════════════ */
   global.DiyaDB = {
     getUserId: getTelegramUserId,
+    getTelegramUserId: getTelegramUserId,
     load: loadUserData,
     saveField,
     saveAllFields,
     startPolling,
     stopPolling,
     connectSSE,
+    disconnectSSE,
     getCache: () => _cache,
-    clearCache: () => { _cache = null; _cacheTime = 0; },
-    configure: (opts) => Object.assign(DB_CONFIG, opts),
+    clearCache: () => {
+      _cache = null;
+      _cacheTime = 0;
+    },
+    configure: (opts) => Object.assign(DB_CONFIG, opts || {}),
   };
 
+  // Конфігурація з глобального об'єкта вікна, якщо задано
   if (typeof window !== 'undefined' && window.__DIYA_CONFIG__) {
     Object.assign(DB_CONFIG, window.__DIYA_CONFIG__);
   }
 
-  console.log('[DB] DiyaDB ready. mode:', DB_CONFIG.mode);
+  console.log('[DB] DiyaDB успішно ініціалізовано. Режим:', DB_CONFIG.mode);
 
 })(window);
-

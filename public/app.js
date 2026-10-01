@@ -1,9 +1,9 @@
 /**
  * ╔═════════════════════════════════════════════════════════════╗
- * ║   app.js — Дія PWA v2  (Оновлено під оригінальний дизайн)   ║
+ * ║   app.js — Дія PWA v2  (Оновлено та виправлено)             ║
  * ║   • Автентична верстка карток (єДокумент, Податки тощо)     ║
  * ║   • Дані з БД (через DiyaDB) + localStorage як fallback     ║
- * ║   • Автооновлення при зміні через бота                      ║
+ * ║   • Автооновлення при зміні через бота (SSE/Polling)        ║
  * ╚═════════════════════════════════════════════════════════════╝
  */
 
@@ -22,7 +22,9 @@ try {
     delete _localState.nameEn;
     localStorage.setItem(LS_KEY, JSON.stringify(_localState));
   }
-} catch (e) {}
+} catch (e) {
+  console.warn('[Storage] Error reading local state:', e);
+}
 
 // Єдине джерело правди для поточної сесії
 let APP_DATA = {};
@@ -198,7 +200,6 @@ function _buildCardSkeletonHTML(cfg) {
     </div>`;
 }
 
-// Допоміжна функція для рендерингу ПІБ у 3 рядки
 function _renderFio3Lines(nameStr, id) {
   const parts = (nameStr || '').trim().split(/\s+/);
   const l1 = parts[0] || 'КАСЬЯН';
@@ -212,12 +213,10 @@ function _renderFio3Lines(nameStr, id) {
     </div>`;
 }
 
-// Генерація фронту картки з урахуванням оригінального дизайну Дії
 function _buildCardFrontHTML(cfg, data) {
   const skeleton = _buildCardSkeletonHTML(cfg);
   const nameVal = data[cfg.nameKey] || '—';
 
-  // 1. Картка №1: «єДокумент» (Скріншот ...401.jpg)
   if (cfg.dotsIndex === 'eDoc') {
     const birthVal = data['birthDate'] || '11.06.2009';
     const rnokppVal = data['rnokpp'] || '3997406358';
@@ -258,7 +257,6 @@ function _buildCardFrontHTML(cfg, data) {
       </div>`;
   }
 
-  // 2. Картка №2: «Картка платника податків» (Скріншот ...400.jpg)
   if (cfg.dotsIndex === 'podatki') {
     const rnokppVal = data['rnokpp'] || '3997406358';
     const birthVal = data['birthDate'] || '11.06.2009';
@@ -299,7 +297,6 @@ function _buildCardFrontHTML(cfg, data) {
       </div>`;
   }
 
-  // 3. Стандартний дизайн з фото для інших карток в оригінальному стилі Дії
   const photo = cfg.hasPhoto
     ? `<div class="card-photo-box"><img class="card-photo" src="${data.mainPhoto || 'assets/user_photo.jpg'}" alt="Фото"></div>`
     : '';
@@ -403,7 +400,7 @@ function _refreshAllCards(data) {
       });
     });
 
-    const nameEl = slider.querySelector(`#${cfg.nameKey}-${docId}, #name-${docId}`);
+    const nameEl = slider.querySelector(`#name-${docId}`);
     if (nameEl && data[cfg.nameKey]) {
       const parts = data[cfg.nameKey].trim().split(/\s+/);
       const divs = nameEl.querySelectorAll('div');
@@ -482,7 +479,7 @@ function _copyHandler(e) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 4. SKELEtons & SYNC
+// 4. SKELETONS & SYNC
 // ═══════════════════════════════════════════════════════════════
 function hideCardSkeleton(docId) {
   const sk = document.getElementById('skeleton-' + docId);
@@ -540,7 +537,7 @@ function initOfflineWatcher() {
 // 5. ІНІЦІАЛІЗАЦІЯ З БД
 // ═══════════════════════════════════════════════════════════════
 async function initFromDB() {
-  if (typeof DiyaDB === 'undefined') {
+  if (typeof DiyaDB === 'undefined' || !DiyaDB) {
     console.warn('[App] DiyaDB не підключено. Використовуємо localStorage.');
     mergeData({});
     buildAllCards();
@@ -561,6 +558,10 @@ async function initFromDB() {
     if (navigator.onLine) setOfflineBanner(false);
     setTimeout(hideAllSkeletons, 350);
 
+    if (dbData && dbData[BIOMETRIC_PREF_KEY] !== undefined) {
+      updateBiometricUIState(dbData[BIOMETRIC_PREF_KEY]);
+    }
+
     try { localStorage.setItem(LS_KEY, JSON.stringify(dbData || {})); } catch (e) {}
 
     const onUpdate = (fresh) => {
@@ -569,10 +570,17 @@ async function initFromDB() {
       applyDataToDOM(fresh);
       setAllSyncing('ok');
       hideAllSkeletons();
+      if (fresh[BIOMETRIC_PREF_KEY] !== undefined) {
+        updateBiometricUIState(fresh[BIOMETRIC_PREF_KEY]);
+      }
       showNotification('✓ Дані оновлено ботом', true);
     };
 
-    DiyaDB.connectSSE(onUpdate);
+    if (typeof DiyaDB.connectSSE === 'function') {
+      DiyaDB.connectSSE(onUpdate);
+    } else if (typeof DiyaDB.startPolling === 'function') {
+      DiyaDB.startPolling(30000, onUpdate);
+    }
 
   } catch (err) {
     console.error('[App] DB init error:', err);
@@ -701,10 +709,8 @@ function showNotification(msg, isBotUpdate = false) {
   }
 }
 
-
-
 // ═══════════════════════════════════════════════════════════════
-// СЕКЦІЯ «БЕЗПЕКА» В НАЛАШТУВАННЯХ (Security & Biometrics Toggle)
+// СЕКЦІЯ «БЕЗПЕКА» В НАЛАШТУВАННЯХ
 // ═══════════════════════════════════════════════════════════════
 const BIOMETRIC_PREF_KEY = 'biometricsEnabled';
 
@@ -715,7 +721,7 @@ function isBiometricsEnabled() {
   if (_localState[BIOMETRIC_PREF_KEY] !== undefined) {
     return _localState[BIOMETRIC_PREF_KEY] === true || _localState[BIOMETRIC_PREF_KEY] === 'true';
   }
-  return true; // За замовчуванням увімкнено
+  return true;
 }
 
 function updateBiometricUIState(enabled) {
@@ -738,7 +744,6 @@ async function setBiometricsPreference(enabled) {
     localStorage.setItem(LS_KEY, JSON.stringify(_localState));
   } catch (e) {}
 
-  // Збереження в локальний кеш DiyaDB
   if (typeof DiyaDB !== 'undefined' && DiyaDB) {
     try {
       const uid = (typeof DiyaDB.getTelegramUserId === 'function')
@@ -750,8 +755,9 @@ async function setBiometricsPreference(enabled) {
       cached[BIOMETRIC_PREF_KEY] = enabled;
       localStorage.setItem(dbKey, JSON.stringify(cached));
 
-      // Спроба відправити в API, якщо підтримується
-      await DiyaDB.saveField(BIOMETRIC_PREF_KEY, enabled);
+      if (typeof DiyaDB.saveField === 'function') {
+        await DiyaDB.saveField(BIOMETRIC_PREF_KEY, enabled);
+      }
     } catch (err) {
       console.warn('[DiyaDB] Error saving biometric preference:', err);
     }
@@ -805,7 +811,6 @@ function initSecuritySettings() {
 }
 
 function initTelegramTheme() {
-
   try {
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -876,7 +881,7 @@ function initPullToRefresh() {
       setAllSyncing('syncing');
       try {
         if (typeof DiyaDB !== 'undefined') {
-          DiyaDB.clearCache();
+          if (typeof DiyaDB.clearCache === 'function') DiyaDB.clearCache();
           const fresh = await DiyaDB.load();
           mergeData(fresh);
           buildAllCards();
@@ -973,7 +978,6 @@ function setupModals() {
       });
     });
 
-    // Touch drag down to dismiss (iOS bottom sheet physics)
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
@@ -1038,7 +1042,6 @@ function setupModals() {
   bindModal('#fullInfoDip', 'dip-modal', 'dip_block_div');
   bindModal('#fullInfoPodatki', 'podatki-modal', 'podatki_block_div');
 
-  // Delegated click support
   const modalMapping = {
     'fullInfoPasport': { modal: 'pasport-modal', block: 'pasport_block_div' },
     'fullInfoZagran': { modal: 'zagran-modal', block: 'zagran_block_div' },
@@ -1062,7 +1065,6 @@ function setupModals() {
       }
     }
 
-    // Modal copy buttons
     const copyBtn = e.target.closest('.modal-copy-btn, .copyPng');
     if (copyBtn) {
       e.stopPropagation();
@@ -1167,7 +1169,6 @@ function setupAddDocAndChangeOrder() {
         changeOrderList.insertBefore(dragged, next && card.nextSibling || card);
       });
 
-      // Touch drag підтримка
       let startY = 0;
       const handle = card.querySelector('.order-item-handle') || card;
       handle.addEventListener('touchstart', (e) => {
@@ -1381,8 +1382,10 @@ function setupAdminPanel() {
 
     if (typeof DiyaDB !== 'undefined' && DiyaDB) {
       setAllSyncing('syncing');
-      for (const [k, v] of Object.entries(updated)) {
-        await DiyaDB.saveField(k, v);
+      if (typeof DiyaDB.saveField === 'function') {
+        for (const [k, v] of Object.entries(updated)) {
+          await DiyaDB.saveField(k, v);
+        }
       }
       setAllSyncing('ok');
     }
@@ -1414,47 +1417,19 @@ function setupAdminPanel() {
   document.getElementById('admin-main-photo')?.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-    new FileReader().onload = ev => {
+    const reader = new FileReader();
+    reader.onload = ev => {
       APP_DATA.mainPhoto = ev.target.result;
       _localState.mainPhoto = ev.target.result;
       document.querySelectorAll('.card-photo, #imgPassport, #imgStudent, #imgRights, #imgZagran').forEach(img => img.src = ev.target.result);
     };
-    new FileReader().readAsDataURL(file);
+    reader.readAsDataURL(file);
   });
 }
 
 // ═══════════════════════════════════════════════════════════════
 // 11. ГОЛОВНА ІНІЦІАЛІЗАЦІЯ
 // ═══════════════════════════════════════════════════════════════
-async function initFromDB() {
-  if (typeof DiyaDB === 'undefined' || !DiyaDB) return;
-
-  try {
-    const data = await DiyaDB.load();
-    if (data) {
-      mergeData(data);
-      buildAllCards();
-      applyDataToDOM(data);
-
-      if (data[BIOMETRIC_PREF_KEY] !== undefined) {
-        updateBiometricUIState(data[BIOMETRIC_PREF_KEY]);
-      }
-    }
-
-    DiyaDB.startPolling(30000, (fresh) => {
-      mergeData(fresh);
-      buildAllCards();
-      applyDataToDOM(fresh);
-      if (fresh[BIOMETRIC_PREF_KEY] !== undefined) {
-        updateBiometricUIState(fresh[BIOMETRIC_PREF_KEY]);
-      }
-      showNotification('✓ Дані оновлено з сервера', true);
-    });
-  } catch (e) {
-    console.warn('[DiyaDB] Не вдалося завантажити дані при старті:', e);
-  }
-}
-
 window.addEventListener('DOMContentLoaded', async () => {
   mergeData({});
   buildAllCards();
@@ -1528,6 +1503,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await initFromDB();
 });
 
+// Глобальний доступ
 window.openAiDiia = openAiDiia;
 window.closeAiDiia = closeAiDiia;
 window.sendAiMsg = sendAiMsg;
@@ -1536,5 +1512,3 @@ window.openSettingsSheet = openSettingsSheet;
 window.closeSettingsSheet = closeSettingsSheet;
 window.isBiometricsEnabled = isBiometricsEnabled;
 window.setBiometricsPreference = setBiometricsPreference;
-
-

@@ -6,78 +6,65 @@
 :root {
     /* Холст и Панели (1170 × 2532 px) */
     --ds-screen-w: 390px;                       /* 1170px */
-    --ds-status-bar: 40px;                      /* 120px */
     --ds-bottom-nav: 76.67px;                   /* 230px */
 
     /* Главная карточка (980 × 1360 px, ~84% ширины экрана, R: 60px) */
-    --ds-card-w: 326.67px;                     /* 980px */
-    --ds-card-h: 453.33px;                     /* 1360px */
-    --ds-card-r: 20px;                         /* 60px */
-    --ds-card-pad-top: 25px;                   /* 75px */
-    --ds-card-pad-side: 16.67px;               /* 50px */
-    --ds-card-pad-bottom: 25px;                /* 75px */
+    --ds-card-w: 326.67px;                      /* 980px */
+    --ds-card-h: 453.33px;                      /* 1360px */
+    --ds-card-r: 20px;                          /* 60px */
+    --ds-card-pad-top: 25px;                    /* 75px */
+    --ds-card-pad-side: 16.67px;                /* 50px */
+    --ds-card-pad-bottom: 25px;                 /* 75px */
 
     /* Фото профиля (420 × 530 px, R: 35px, отступы: 60px от заголовка, 65px вправо) */
-    --ds-photo-w: 140px;                       /* 420px */
-    --ds-photo-h: 176.67px;                    /* 530px */
-    --ds-photo-r: 11.67px;                     /* 35px */
-    --ds-photo-gap-right: 21.67px;             /* 65px */
-    --ds-header-margin-bottom: 20px;           /* 60px */
+    --ds-photo-w: 140px;                        /* 420px */
+    --ds-photo-h: 176.67px;                     /* 530px */
+    --ds-photo-r: 11.67px;                      /* 35px */
+    --ds-photo-gap-right: 21.67px;              /* 65px */
+    --ds-header-margin-bottom: 20px;            /* 60px */
 
     /* Текст и элементы внутри */
-    --ds-title-fz: 21.33px;                    /* 64px, Bold */
-    --ds-data-block-gap: 16.67px;              /* 50px */
-    --ds-data-label-fz: 12.67px;               /* 38px */
-    --ds-data-val-fz: 14px;                    /* 42px */
+    --ds-title-fz: 21.33px;                     /* 64px, Bold */
+    --ds-data-block-gap: 16.67px;               /* 50px */
+    --ds-data-label-fz: 12.67px;                /* 38px */
+    --ds-data-val-fz: 14px;                     /* 42px */
 
     /* Бегущая строка (980 × 76 px, шрифт 36 px, отступ от фото 60 px) */
-    --ds-marquee-h: 25.33px;                   /* 76px */
-    --ds-marquee-fz: 12px;                     /* 36px */
-    --ds-marquee-margin-top: 20px;             /* 60px */
+    --ds-marquee-h: 25.33px;                    /* 76px */
+    --ds-marquee-fz: 12px;                      /* 36px */
+    --ds-marquee-margin-top: 20px;              /* 60px */
 
     /* ФИО (62 px, line-height 72 px, отступ от плашки 80 px) */
-    --ds-fio-fz: 20.67px;                      /* 62px */
-    --ds-fio-lh: 24px;                         /* 72px */
-    --ds-fio-margin-top: 26.67px;              /* 80px */
+    --ds-fio-fz: 20.67px;                       /* 62px */
+    --ds-fio-lh: 24px;                          /* 72px */
+    --ds-fio-margin-top: 26.67px;               /* 80px */
 
     /* Кнопка «...» (диаметр 92 px, черный круг) */
-    --ds-dots-size: 30.67px;                   /* 92px */
+    --ds-dots-size: 30.67px;                    /* 92px */
 
     /* Пагинация (точки 20 px, gap 28 px, отступ снизу 90 px) */
-    --ds-page-dot: 6.67px;                     /* 20px */
-    --ds-page-gap: 9.33px;                     /* 28px */
-    --ds-page-bottom-pad: 30px;                /* 90px */
+    --ds-page-dot: 6.67px;                      /* 20px */
+    --ds-page-gap: 9.33px;                      /* 28px */
+    --ds-page-bottom-pad: 30px;                 /* 90px */
 
-    /* Нижнее меню (200 px черная панель, 5 колонок по 234 px, иконки 64×64 px, подписи 28 px, gap 16 px) */
-    --ds-footer-bar-h: 66.67px;                /* 200px */
-    --ds-footer-col-w: 78px;                   /* 234px */
-    --ds-footer-icon-size: 21.33px;            /* 64px */
-    --ds-footer-label-fz: 9.33px;              /* 28px */
-    --ds-footer-gap: 5.33px;                   /* 16px */
-    --ds-home-ind-w: 126.67px;                 /* 380px */
-    --ds-home-ind-h: 4px;                      /* 12px */
-    --ds-home-ind-bottom: 6.67px;              /* 20px */
+    /* Нижнее меню */
+    --ds-footer-bar-h: 66.67px;                 /* 200px */
+    --ds-footer-col-w: 78px;                    /* 234px */
+    --ds-footer-icon-size: 21.33px;             /* 64px */
+    --ds-footer-label-fz: 9.33px;               /* 28px */
+    --ds-footer-gap: 5.33px;                    /* 16px */
+    --ds-home-ind-w: 126.67px;                  /* 380px */
+    --ds-home-ind-h: 4px;                       /* 12px */
+    --ds-home-ind-bottom: 6.67px;               /* 20px */
 }
 
-/* Статус-бар (верх): 120 px -> 40px */
+/* Прихована верхня панель */
 .diia-top-bar {
-    width: 100%;
-    max-width: var(--ds-screen-w);
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding: max(var(--ds-status-bar), env(safe-area-inset-top, var(--ds-status-bar))) var(--ds-card-pad-side) 12px var(--ds-card-pad-side);
-    box-sizing: border-box;
-    flex-shrink: 0;
-}
-
-.diia-top-title {
-    font-family: 'e-UkraineHead', sans-serif !important;
-    font-size: 28px !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.5px !important;
-    color: #000000 !important;
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
     margin: 0 !important;
+    overflow: hidden !important;
 }
 
 /* Swiper container & document slider */
@@ -144,7 +131,7 @@
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
 }
 
-/* Внутренние отступы (padding): Верх 75 px, Бока 50 px, Низ 75 px */
+/* Внутренние отступы (padding) */
 .front,
 .back {
     width: 100% !important;
@@ -163,7 +150,7 @@
     overflow: hidden !important;
 }
 
-/* Заголовок («єДокумент»): 64 px, Bold, отступ от заголовка 60 px */
+/* Заголовок («єДокумент»): 64 px, Bold */
 .front > h1 {
     font-family: 'e-UkraineHead', sans-serif !important;
     font-size: var(--ds-title-fz) !important;
@@ -175,7 +162,7 @@
     width: auto !important;
 }
 
-/* Фото профиля: 420 × 530 px (скругление 35 px), 65 px до текста справа */
+/* Фото профиля */
 .dataBlock {
     display: flex !important;
     justify-content: flex-start !important;
@@ -198,7 +185,7 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Блок данных (Дата/РНОКПП): Межблочный отступ 50 px, заголовки 38 px, значения 42 px */
+/* Блок данных */
 .dataInfo {
     display: flex !important;
     flex-direction: column !important;
@@ -241,7 +228,7 @@
     letter-spacing: -0.2px !important;
 }
 
-/* Бегущая строка: 980 × 76 px, шрифт 36 px, отступ от фото 60 px */
+/* Бегущая строка */
 .marquee,
 .line1.marquee,
 .line2.marquee {
@@ -265,7 +252,7 @@
     box-sizing: border-box !important;
 }
 
-/* ФИО: 62 px (межстрочный интервал 72 px), отступ от плашки 80 px */
+/* ФИО */
 .fioBlock {
     margin-top: var(--ds-fio-margin-top) !important;
     margin-bottom: 0 !important;
@@ -293,7 +280,7 @@
     max-width: calc(100% - 42px) !important;
 }
 
-/* Кнопка «...»: Диаметр 92 px, черный круг */
+/* Кнопка «...» */
 .moreInfo {
     position: relative !important;
     bottom: auto !important;
@@ -959,7 +946,7 @@
     width: 100% !important;
     height: 20px !important;
     margin-top: 14px !important;
-    margin-bottom: var(--ds-page-bottom-pad, 20px) !important;
+    margin-bottom: var(--ds-page-bottom-pad, 30px) !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -983,7 +970,6 @@
     text-align: center !important;
 }
 
-/* Неактивні точки: правильна кругла форма 50%, однаковий розмір 7px, напівпрозорий білий колір rgba(255, 255, 255, 0.45) */
 .documentSlider .swiper-pagination-bullet,
 .document-dots-wrapper .swiper-pagination-bullet {
     display: inline-block !important;
@@ -1006,7 +992,6 @@
     box-sizing: border-box !important;
 }
 
-/* Активна точка: чисто білий колір (#FFFFFF), 100% (1.0) opacity, однаковий круглий розмір 7px */
 .documentSlider .swiper-pagination-bullet-active,
 .document-dots-wrapper .swiper-pagination-bullet-active {
     background: #FFFFFF !important;
@@ -1036,7 +1021,7 @@
     padding: 10px 22px;
     border-radius: 9999px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-    z-index: 99999;
+    z-index: 9999;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.25s ease, transform 0.25s ease;
@@ -1203,9 +1188,6 @@
 
 /* ═══════════════════════════════════════════════════════════════
    НИЖНЕЕ МЕНЮ (Bottom Navigation: 1170 × 2532 px System)
-   * Черная панель: Высота 200 px (5 колонок по ~234 px)
-   * Иконки: 64 × 64 px, подписи 28 px, отступ между ними 16 px
-   * Полоска Home Indicator: 380 × 12 px, отступ снизу 20 px
    ═══════════════════════════════════════════════════════════════ */
 .footer {
     position: absolute !important;
@@ -1283,7 +1265,7 @@
     font-weight: 600 !important;
 }
 
-/* Home Indicator: 380 × 12 px, отступ снизу 20 px */
+/* Home Indicator */
 .home-indicator,
 .footer::after {
     content: '' !important;
@@ -1411,13 +1393,6 @@
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
-}
-.diia-top-bar {
-    display: none !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
 }
 
 /* ==========================================================================
@@ -1672,7 +1647,7 @@
     margin-top: 2px !important;
 }
 
-/* ─── WATERMARK OVERLAY (Статус підписки: false) ─── */
+/* ─── WATERMARK OVERLAY ─── */
 .diia-watermark-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -1704,6 +1679,3 @@
     user-select: none !important;
     -webkit-user-select: none !important;
 }
-
-
-

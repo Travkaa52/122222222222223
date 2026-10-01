@@ -1,7 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
    FIREBASE FIRESTORE VERIFICATION MODAL & UI
    ═══════════════════════════════════════════════════════════════ */
-.fb-verify-overlay {
+
+/* Затемнення та розмиття фону */
+.fb-verify-overlay,
+#fbVerifyModal {
     position: fixed;
     inset: 0;
     z-index: 10005;
@@ -12,17 +15,24 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.fb-verify-overlay.active {
+/* Активний стан модального вікна */
+.fb-verify-overlay.active,
+#fbVerifyModal.active {
     opacity: 1;
     pointer-events: auto;
 }
 
-.fb-verify-modal {
+/* Карточка модалки */
+.fb-verify-modal,
+#fbVerifyModal .fb-verify-modal {
     background: #ffffff;
     border-radius: 28px;
     width: 100%;
@@ -35,12 +45,15 @@
     text-align: center;
     transform: scale(0.92);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
 }
 
-.fb-verify-overlay.active .fb-verify-modal {
+.fb-verify-overlay.active .fb-verify-modal,
+#fbVerifyModal.active .fb-verify-modal {
     transform: scale(1);
 }
 
+/* Іконка вгорі */
 .fb-verify-icon {
     width: 60px;
     height: 60px;
@@ -51,28 +64,33 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 .fb-verify-icon svg {
     width: 30px;
     height: 30px;
+    fill: currentColor;
 }
 
+/* Заголовок та опис */
 .fb-verify-title {
-    font-family: 'e-UkraineHead', sans-serif;
+    font-family: 'e-UkraineHead', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 20px;
     font-weight: 700;
     color: #0f172a;
-    margin-bottom: 8px;
+    margin: 0 0 8px 0;
+    line-height: 1.2;
 }
 
 .fb-verify-desc {
     font-size: 13px;
     color: #64748b;
     line-height: 1.45;
-    margin-bottom: 20px;
+    margin: 0 0 20px 0;
 }
 
+/* Поле вводу ID */
 .fb-verify-input-group {
     width: 100%;
     margin-bottom: 12px;
@@ -88,7 +106,8 @@
     margin-left: 4px;
 }
 
-.fb-verify-input {
+.fb-verify-input,
+#fbUserIdInput {
     width: 100%;
     height: 48px;
     background: #f1f5f9;
@@ -100,30 +119,44 @@
     color: #0f172a;
     outline: none;
     box-sizing: border-box;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.fb-verify-input:focus {
+.fb-verify-input:focus,
+#fbUserIdInput:focus {
     background: #ffffff;
     border-color: #000000;
 }
 
-.fb-verify-error {
+.fb-verify-input:-webkit-autofill,
+#fbUserIdInput:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #f1f5f9 inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+/* Повідомлення про помилку */
+.fb-verify-error,
+#fbVerifyError {
     width: 100%;
     color: #ef4444;
     font-size: 12px;
+    line-height: 1.35;
     min-height: 18px;
     margin-bottom: 14px;
     text-align: left;
     padding-left: 4px;
     display: none;
+    box-sizing: border-box;
 }
 
-.fb-verify-error.active {
+.fb-verify-error.active,
+#fbVerifyError.active {
     display: block;
 }
 
-.fb-verify-submit-btn {
+/* Кнопка підтвердження */
+.fb-verify-submit-btn,
+#btnFbVerifyConfirm {
     width: 100%;
     height: 50px;
     background: #000000;
@@ -137,33 +170,52 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: background 0.2s, transform 0.1s;
+    transition: background-color 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.fb-verify-submit-btn:hover {
+.fb-verify-submit-btn:hover,
+#btnFbVerifyConfirm:hover {
     background: #1e293b;
 }
 
-.fb-verify-submit-btn:active {
+.fb-verify-submit-btn:active,
+#btnFbVerifyConfirm:active {
     transform: scale(0.98);
 }
 
-.fb-verify-submit-btn:disabled {
+.fb-verify-submit-btn:disabled,
+#btnFbVerifyConfirm:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
 }
 
-.fb-verify-skip-btn {
+/* Кнопка пропуску */
+.fb-verify-skip-btn,
+#btnFbVerifySkip {
     margin-top: 12px;
     background: none;
     border: none;
     color: #64748b;
     font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     text-decoration: underline;
+    transition: color 0.15s ease;
+    outline: none;
 }
 
-.fb-verify-spinner {
+.fb-verify-skip-btn:hover,
+#btnFbVerifySkip:hover {
+    color: #0f172a;
+}
+
+/* Індикатор завантаження (Spinner) */
+.fb-verify-spinner,
+#fbVerifySpinner {
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -171,8 +223,11 @@
     border-top-color: #ffffff;
     animation: fb-spin 0.8s linear infinite;
     display: inline-block;
+    box-sizing: border-box;
 }
 
 @keyframes fb-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
