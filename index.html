@@ -5460,99 +5460,99 @@
         return formattedDateTime;
     }
 
-    // Выводим текущие дату и время в нужном формате
-    document.querySelectorAll('#getCurrentDateTime').forEach((e) => {
-        e.textContent = getCurrentDateTime();
-    });
+   // Рефакторинг обработчиков открытия QR / Штрихкода из модального окна информации
+document.querySelectorAll('#openQr, #openSh').forEach((btn) => {
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
 
-    document.querySelectorAll('#openQr').forEach(function (e) {
-        e.addEventListener('click', function (element) {
-            const type = $(this).attr('data-index');
-            const div = document.querySelector(`.${type}`);
+        const isBarcode = this.id === 'openSh';
+        const type = $(this).attr('data-index');
+        const sliderEl = document.querySelector(`.slider.${type}`);
 
-            $(`.${type}_block_div.active`).removeClass('active');
+        if (!sliderEl) return;
 
-            anime({
-                targets: div,
-                rotateY: {
-                    value: '+=180',
-                    delay: 0,
-                },
-                easing: 'linear',
-                duration: 100,
-                complete: function (anim) {
-                    playing = false;
-                },
-            });
+        // 1. Закрываем шторку полной информации
+        $(`.${type}_block_div`).removeClass('active').children('div').removeClass('active');
 
-            const her = $(`.${type}`).find('.qrChange > div > div')[0];
-
-            console.log(her);
-
-            $(her).css({ background: 'black' });
-            $(her).find('img').css('filter', 'brightness(0) invert(1)');
-            const our = $(her).parent('div');
-            var need = '';
-            if (our.attr('data-index') === '1') {
-                $(div).find('.changeCode').removeClass('shcode');
-                $('.changeCode').addClass('qrcode');
-                $('.shText').css('display', 'none');
-                need = our.next(`[data-index="2"]`);
-            } else {
-                $('.changeCode').addClass('shcode');
-                $('.changeCode').removeClass('qrcode');
-                $('.shText').css('display', 'flex');
-                need = our.prev(`[data-index="1"]`);
+        // 2. Переворачиваем карточку (если она еще не повернута обратной стороной)
+        if (typeof flipCard === 'function') {
+            const state = cardState.get(sliderEl) || sliderEl._cardFlipState || { flipped: false };
+            if (!state.flipped) {
+                flipCard(sliderEl);
             }
-            need.find('div').css('background', '#ddd');
-            need.find('div > img').css('filter', 'brightness(1) invert(0)');
+        }
+
+        // 3. Переключаем режим (QR или Штрихкод) строго внутри контекста текущей карточки
+        const changeCode = sliderEl.querySelector('.changeCode');
+        const shText = sliderEl.querySelector('.shText');
+        const btnGroup = sliderEl.querySelectorAll('.qrChange > div');
+
+        if (changeCode) {
+            if (isBarcode) {
+                changeCode.classList.Этот код управляет переключением между QR-кодом и штрихкодом (или альтернативным видом) с использованием анимации поворота карточки через **Anime.js** и manipulation DOM с помощью **jQuery** и чистой **JavaScript**.
+
+Вот рефакторинг с исправлением уязвимостей, устранением дублирования (DRY) и переходом на современный JavaScript:
+
+```javascript
+// Вывод текущих даты и времени
+document.querySelectorAll('#getCurrentDateTime').forEach((e) => {
+    e.textContent = getCurrentDateTime();
+});
+
+// Объединенная функция переключения кода (QR / Штрихкод)
+function toggleCodeView(targetIndex, triggerElement) {
+    const $this =$(triggerElement);
+    const type = $this.attr('data-index');
+    const div = document.querySelector(`.${type}`);
+
+    $(`.${type}_block_div.active`).removeClass('active');
+
+    // Анимация вращения карточки
+    if (typeof anime !== 'undefined') {
+        anime({
+            targets: div,
+            rotateY: {
+                value: '+=180',
+                delay: 0,
+            },
+            easing: 'linear',
+            duration: 100,
+            complete: () => {
+                if (typeof playing !== 'undefined') playing = false;
+            },
         });
-    });
+    }
 
-    document.querySelectorAll('#openSh').forEach(function (e) {
-        e.addEventListener('click', function (element) {
-            const type = $(this).attr('data-index');
-            const div = document.querySelector(`.${type}`);
+    const targetElement = $(`.${type}`).find('.qrChange > div > div').get(targetIndex);
+    if (!targetElement) return;
 
-            $(`.${type}_block_div.active`).removeClass('active');
+    const $target =$(targetElement);
+    $target.css({ background: 'black' });$target.find('img').css('filter', 'brightness(0) invert(1)');
 
-            anime({
-                targets: div,
-                rotateY: {
-                    value: '+=180',
-                    delay: 0,
-                },
-                easing: 'linear',
-                duration: 100,
-                complete: function (anim) {
-                    playing = false;
-                },
-            });
+    const $parent =$target.parent('div');
+    let $sibling;
 
-            const her = $(`.${type}`).find('.qrChange > div > div')[1];
+    if ($parent.attr('data-index') === '1') {$(div).find('.changeCode').removeClass('shcode');
+        $('.changeCode').addClass('qrcode');$('.shText').css('display', 'none');
+        $sibling =$parent.next('[data-index="2"]');
+    } else {
+        $('.changeCode').addClass('shcode').removeClass('qrcode');$('.shText').css('display', 'flex');
+        $sibling =$parent.prev('[data-index="1"]');
+    }
 
-            console.log(her);
+    if ($sibling && $sibling.length) {$sibling.find('div').css('background', '#ddd');
+        $sibling.find('div > img').css('filter', 'brightness(1) invert(0)');
+    }
+}
 
-            $(her).css({ background: 'black' });
-            $(her).find('img').css('filter', 'brightness(0) invert(1)');
-            const our = $(her).parent('div');
-            var need = '';
-            if (our.attr('data-index') === '1') {
-                $('.changeCode').removeClass('shcode');
-                $('.changeCode').addClass('qrcode');
-                $('.shText').css('display', 'none');
-                need = our.next(`[data-index="2"]`);
-            } else {
-                $('.changeCode').addClass('shcode');
-                $('.changeCode').removeClass('qrcode');
-                $('.shText').css('display', 'flex');
-                need = our.prev(`[data-index="1"]`);
-            }
-            need.find('div').css('background', '#ddd');
-            need.find('div > img').css('filter', 'brightness(1) invert(0)');
-        });
-    });
+// Слушатели событий
+$(document).on('click', '#openQr', function () {
+    toggleCodeView(0, this);
+});
 
+$(document).on('click', '#openSh', function () {
+    toggleCodeView(1, this);
+});
 
 
 
