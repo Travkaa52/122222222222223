@@ -585,7 +585,7 @@ html, body {
 .marquee-inner {
     display: inline-block;
     white-space: nowrap;
-    animation: diiaMarquee 14s linear infinite;
+    animation: diiaMarquee 55s linear infinite;
 }
 
 @keyframes diiaMarquee {

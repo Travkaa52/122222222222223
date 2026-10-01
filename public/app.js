@@ -444,15 +444,32 @@ function _rebindCardHandlers() {
 function _cardClickHandler(e) {
   if (!this || !this.classList || this.classList.contains('add-swap-card-container')) return;
   if (e.target.closest('.card-dots, .qrChange, .copyPng, .moreInfo, .card-copy-btn, button, .action-card-circle, .add-doc-card, .swap-doc-card')) return;
-  flipCard(this);
+  if (typeof window.flipCard === 'function') {
+    window.flipCard(this, e);
+  } else {
+    flipCard(this, e);
+  }
 }
 
 function _dotsClickHandler(e) {
   e.stopPropagation();
-  const index = this?.getAttribute ? this.getAttribute('data-index') : null;
+  let index = this?.getAttribute ? this.getAttribute('data-index') : null;
+  if (!index) {
+    const slider = this?.closest ? this.closest('.slider') : null;
+    if (slider) {
+      const known = ['eDoc', 'podatki', 'pasport', 'dip', 'zagran', 'study', 'prava', 'zbroya'];
+      for (const k of known) {
+        if (slider.classList.contains(k)) { index = k; break; }
+      }
+    }
+  }
   if (!index) return;
   const sheet = document.querySelector(`.${index}_block_div`);
-  if (sheet?.classList) sheet.classList.add('active');
+  if (sheet) {
+    sheet.classList.add('active');
+    const inner = sheet.querySelector(':scope > div') || sheet.firstElementChild;
+    if (inner) inner.classList.add('active');
+  }
 }
 
 function _copyHandler(e) {
@@ -770,6 +787,10 @@ function initSecuritySettings() {
 
   document.getElementById('btnOpenSettings')?.addEventListener('click', openSettingsSheet);
   document.getElementById('btnCloseSettingsSheet')?.addEventListener('click', closeSettingsSheet);
+  document.getElementById('rowChangeDbCode')?.addEventListener('click', () => {
+    closeSettingsSheet();
+    window.fbVerificationUI?.show();
+  });
   document.getElementById('settingsSheetModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'settingsSheetModal') closeSettingsSheet();
   });
@@ -895,7 +916,11 @@ function startCardCountdown(sliderEl) {
   cardTimers.set(sliderEl, interval);
 }
 
-function flipCard(sliderEl) {
+function flipCard(sliderEl, e) {
+  if (typeof window.flipCard === 'function' && window.flipCard !== flipCard) {
+    window.flipCard(sliderEl, e);
+    return;
+  }
   const isFlipped = sliderEl.classList.toggle('is-flipped');
   if (isFlipped) { startCardCountdown(sliderEl); }
   else {
@@ -909,20 +934,99 @@ function flipCard(sliderEl) {
 function setupModals() {
   const overlay = document.getElementById('overlay');
 
+  function openModal(modal, blockDivClass) {
+    if (!modal) return;
+    modal.style.top = '6%';
+    modal.classList.add('open');
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      overlay.style.opacity = '1';
+    }
+    if (blockDivClass) {
+      const bd = document.querySelector('.' + blockDivClass);
+      if (bd) {
+        bd.classList.remove('active');
+        const bds = bd.querySelectorAll('div');
+        bds.forEach(d => d.classList.remove('active'));
+      }
+    }
+    if (typeof window.initRunningMarquees === 'function') {
+      window.initRunningMarquees();
+    }
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.style.top = '100%';
+    modal.classList.remove('open');
+  }
+
   function bindModal(triggerId, modalId, blockDivClass) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
+
     document.querySelectorAll(triggerId).forEach(trig => {
       trig.addEventListener('click', (e) => {
         e.stopPropagation();
-        modal.classList.add('open');
-        if (overlay) overlay.classList.remove('hidden');
-        if (blockDivClass) {
-          const bd = document.querySelector('.' + blockDivClass);
-          if (bd) bd.classList.remove('active');
-        }
+        e.preventDefault();
+        openModal(modal, blockDivClass);
       });
     });
+
+    // Touch drag down to dismiss (iOS bottom sheet physics)
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    const modalContent = modal.querySelector('.modal-content') || modal;
+
+    modal.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      currentY = startY;
+      isDragging = true;
+      modal.style.transition = 'none';
+      if (overlay) overlay.style.transition = 'none';
+    }, { passive: true });
+
+    modal.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      currentY = e.touches[0].clientY;
+      const diffY = currentY - startY;
+      if (modalContent.scrollTop <= 0 && diffY > 0) {
+        modal.style.top = `calc(6% + ${diffY}px)`;
+        if (overlay) {
+          overlay.style.opacity = Math.max(0, 1 - diffY / 500);
+        }
+      }
+    }, { passive: true });
+
+    modal.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      modal.style.transition = 'top 0.35s cubic-bezier(0.2, 0.9, 0.3, 1)';
+      if (overlay) overlay.style.transition = 'opacity 0.3s ease';
+
+      if (currentY - startY > 90) {
+        closeModal(modal);
+        if (overlay) {
+          overlay.classList.add('hidden');
+          overlay.style.opacity = '0';
+        }
+      } else {
+        modal.style.top = '6%';
+        if (overlay) overlay.style.opacity = '1';
+      }
+    });
+
+    const handle = modal.querySelector('.handle');
+    if (handle) {
+      handle.addEventListener('click', () => {
+        closeModal(modal);
+        if (overlay) {
+          overlay.classList.add('hidden');
+          overlay.style.opacity = '0';
+        }
+      });
+    }
   }
 
   bindModal('#fullInfoPasport', 'pasport-modal', 'pasport_block_div');
@@ -931,11 +1035,56 @@ function setupModals() {
   bindModal('#fullInfoeDoc', 'eDoc-modal', 'eDoc_block_div');
   bindModal('#fullInfoPrava', 'prava-modal', 'prava_block_div');
   bindModal('#fullInfoZbroya', 'zbroya-modal', 'zbroya_block_div');
+  bindModal('#fullInfoDip', 'dip-modal', 'dip_block_div');
+  bindModal('#fullInfoPodatki', 'podatki-modal', 'podatki_block_div');
+
+  // Delegated click support
+  const modalMapping = {
+    'fullInfoPasport': { modal: 'pasport-modal', block: 'pasport_block_div' },
+    'fullInfoZagran': { modal: 'zagran-modal', block: 'zagran_block_div' },
+    'fullInfoStudy': { modal: 'study-modal', block: 'study_block_div' },
+    'fullInfoeDoc': { modal: 'eDoc-modal', block: 'eDoc_block_div' },
+    'fullInfoPrava': { modal: 'prava-modal', block: 'prava_block_div' },
+    'fullInfoZbroya': { modal: 'zbroya-modal', block: 'zbroya_block_div' },
+    'fullInfoDip': { modal: 'dip-modal', block: 'dip_block_div' },
+    'fullInfoPodatki': { modal: 'podatki-modal', block: 'podatki_block_div' }
+  };
+
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('[id^="fullInfo"]');
+    if (trigger) {
+      const match = modalMapping[trigger.id];
+      if (match) {
+        e.stopPropagation();
+        e.preventDefault();
+        const m = document.getElementById(match.modal);
+        if (m) openModal(m, match.block);
+      }
+    }
+
+    // Modal copy buttons
+    const copyBtn = e.target.closest('.modal-copy-btn, .copyPng');
+    if (copyBtn) {
+      e.stopPropagation();
+      const val = copyBtn.getAttribute('data-copy') || (copyBtn.parentElement ? copyBtn.parentElement.textContent.trim() : '');
+      if (val && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val.replace(/\s+/g, ' ').trim()).catch(() => {});
+      }
+      const notif = document.getElementById('notification');
+      if (notif) {
+        notif.classList.add('show');
+        setTimeout(() => notif.classList.remove('show'), 2000);
+      }
+    }
+  });
 
   if (overlay) {
     overlay.addEventListener('click', () => {
-      document.querySelectorAll('.modal.open').forEach(m => { m.classList.remove('open'); m.style.top = ''; });
+      document.querySelectorAll('.modal.open').forEach(m => {
+        closeModal(m);
+      });
       overlay.classList.add('hidden');
+      overlay.style.opacity = '0';
     });
   }
 }
@@ -1076,13 +1225,18 @@ function setupAddDocAndChangeOrder() {
 function setupCardActionSheets() {
   document.querySelectorAll('.document_block_div').forEach(sheet => {
     sheet.addEventListener('click', e => {
-      if (e.target === sheet) sheet.classList.remove('active');
+      if (e.target === sheet) {
+        sheet.classList.remove('active');
+        sheet.querySelector(':scope > div')?.classList.remove('active');
+      }
     });
   });
   document.querySelectorAll('.close_block').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = btn.getAttribute('data-index');
-      document.querySelector(`.${idx}_block_div`)?.classList.remove('active');
+      const sheet = document.querySelector(`.${idx}_block_div`);
+      sheet?.classList.remove('active');
+      sheet?.querySelector(':scope > div')?.classList.remove('active');
     });
   });
 
@@ -1237,7 +1391,14 @@ function setupAdminPanel() {
     panel.classList.remove('open');
   });
 
-  closeBtn?.addEventListener('click', () => panel.classList.remove('open'));
+  closeBtn?.addEventListener('click', () => {
+    panel.classList.remove('open');
+    document.getElementById('admin-overlay')?.classList.remove('open');
+  });
+  document.getElementById('admin-overlay')?.addEventListener('click', () => {
+    panel.classList.remove('open');
+    document.getElementById('admin-overlay')?.classList.remove('open');
+  });
 
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); panel.classList.toggle('open'); }
@@ -1338,14 +1499,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   if (typeof Swiper !== 'undefined' && document.querySelector('.documentSlider')) {
-    docSwiper = new Swiper('.documentSlider', {
-      slidesPerView: 1.1,
-      centeredSlides: true,
-      spaceBetween: 16,
-      speed: 380,
-      grabCursor: true,
-      pagination: { el: '.swiper-pagination', clickable: true, dynamicBullets: true },
-    });
+    const sliderEl = document.querySelector('.documentSlider');
+    if (sliderEl.swiper) {
+      docSwiper = sliderEl.swiper;
+    } else {
+      docSwiper = new Swiper('.documentSlider', {
+        slidesPerView: 1.1,
+        centeredSlides: true,
+        spaceBetween: 14,
+        speed: 400,
+        grabCursor: true,
+        pagination: { el: '.swiper-pagination', clickable: true, dynamicBullets: false },
+      });
+    }
   }
   if (typeof Swiper !== 'undefined' && document.querySelector('.sliderNews')) {
     newsSwiper = new Swiper('.sliderNews', {

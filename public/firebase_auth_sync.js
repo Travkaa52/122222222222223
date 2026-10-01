@@ -49,12 +49,91 @@ try {
 let activeUnsubscribe = null;
 
 /**
+ * Перевіряє статус підписки користувача в базі даних (Firestore).
+ * Якщо статус підписки false — на весь екран накладається watermark.png
+ *
+ * @param {Object} data - Документ користувача / замовлення
+ */
+export function checkAndApplySubscriptionStatus(data) {
+  if (!data || typeof data !== 'object') return;
+
+  let isSubFalse = false;
+
+  const subCandidate = (data.subscription !== undefined) ? data.subscription
+    : (data.subscription_status !== undefined) ? data.subscription_status
+    : (data.isSubscribed !== undefined) ? data.isSubscribed
+    : (data.is_subscribed !== undefined) ? data.is_subscribed
+    : (data.sub !== undefined) ? data.sub
+    : (data.hasSubscription !== undefined) ? data.hasSubscription
+    : (data.has_subscription !== undefined) ? data.has_subscription
+    : (data.subscriptionStatus !== undefined) ? data.subscriptionStatus
+    : (data.status_subscription !== undefined) ? data.status_subscription
+    : (data.subscriptionActive !== undefined) ? data.subscriptionActive
+    : (data.sub_status !== undefined) ? data.sub_status
+    : (data.paid !== undefined) ? data.paid
+    : undefined;
+
+  if (subCandidate !== undefined) {
+    if (
+      subCandidate === false ||
+      subCandidate === 'false' ||
+      subCandidate === 0 ||
+      subCandidate === '0' ||
+      subCandidate === 'inactive' ||
+      subCandidate === 'expired' ||
+      subCandidate === 'disabled' ||
+      subCandidate === 'unpaid'
+    ) {
+      isSubFalse = true;
+    } else if (
+      subCandidate === true ||
+      subCandidate === 'true' ||
+      subCandidate === 1 ||
+      subCandidate === '1' ||
+      subCandidate === 'active' ||
+      subCandidate === 'paid'
+    ) {
+      isSubFalse = false;
+    }
+  }
+
+  applyWatermarkOverlay(isSubFalse);
+}
+
+/**
+ * Відображає або приховує повноекранний водяний знак (watermark.png).
+ *
+ * @param {boolean} shouldShow - true якщо підписка неактивна (false), false якщо активна
+ */
+export function applyWatermarkOverlay(shouldShow) {
+  let overlay = document.getElementById('diiaWatermarkOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'diiaWatermarkOverlay';
+    overlay.className = 'diia-watermark-overlay';
+    overlay.innerHTML = '<img src="assets/watermark.png" alt="watermark" />';
+    document.body.appendChild(overlay);
+  }
+
+  if (shouldShow) {
+    overlay.classList.add('active');
+    overlay.style.display = 'flex';
+  } else {
+    overlay.classList.remove('active');
+    overlay.style.display = 'none';
+  }
+}
+
+/**
  * Заповнює всі картки документів та модальні вікна даними користувача.
  *
  * @param {Object} orderData - Об'єкт користувача (з Firestore або values.js)
  */
 export function populateUIWithUserData(orderData) {
   if (!orderData || typeof orderData !== 'object') return;
+
+  // Перевірка статусу підписки: якщо subscription === false, на весь екран накладається watermark.png
+  checkAndApplySubscriptionStatus(orderData);
 
   // Вилучення полів (підтримка як схеми orders/users з Firestore, так і values.js)
   const name = orderData.fio || orderData.name || orderData.fullName || orderData.PIB || orderData.textName;
@@ -532,6 +611,8 @@ export async function initFirebaseAuthSync() {
   window.populateUIWithUserData = populateUIWithUserData;
   window.fetchUserFromFirestore = fetchUserFromFirestore;
   window.startRealtimeSync = startRealtimeSync;
+  window.checkAndApplySubscriptionStatus = checkAndApplySubscriptionStatus;
+  window.applyWatermarkOverlay = applyWatermarkOverlay;
 
   // 1. Первинне заповнення даними з values.js (fallback за замовчуванням)
   if (typeof window.defaultUserData !== 'undefined' && window.defaultUserData) {
