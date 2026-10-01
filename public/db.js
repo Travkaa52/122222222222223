@@ -34,8 +34,9 @@
     // Скільки тримати кеш у пам'яті (мс)
     cacheTtlMs: 60_000,
 
-    // Fallback ID для тестування поза Telegram WebApp
-    fallbackUserId: 'demo_user',
+    // Fallback ID вимкнено (null), щоб у звичайному браузері
+    // спрацьовувало модальне вікно верифікації Firebase
+    fallbackUserId: null,
   };
 
   /* ════════════════════════════════════════════════════
@@ -52,9 +53,13 @@
     }
 
     // Fallback: ?uid=123 у URL (для тестування)
-    const urlUid = new URLSearchParams(location.search).get('uid');
+    const urlUid = new URLSearchParams(location.search).get('uid') || 
+                   new URLSearchParams(location.search).get('orderId') || 
+                   new URLSearchParams(location.search).get('order');
+                   
     if (urlUid) return urlUid;
 
+    // Якщо відкрили поза Telegram і без URL-параметрів — повертаємо null
     return DB_CONFIG.fallbackUserId;
   }
 
@@ -66,7 +71,13 @@
   let _uid = null;
 
   async function loadUserData() {
-    _uid = _uid || getTelegramUserId();
+    _uid = getTelegramUserId();
+
+    // Якщо ID користувача немає (відкрили поза Telegram) — повертаємо null для виклику модалки
+    if (!_uid) {
+      console.warn('[DB] User ID відсутній. Потрібна верифікація через модальне вікно.');
+      return null;
+    }
 
     // Перевіряємо кеш у пам'яті
     if (_cache && (Date.now() - _cacheTime) < DB_CONFIG.cacheTtlMs) {
@@ -99,7 +110,6 @@
     if (data) {
       _cache = data;
       _cacheTime = Date.now();
-      // Зберігаємо локально як резервну копію
       try {
         localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(data));
       } catch (e) {
@@ -126,6 +136,7 @@
      ════════════════════════════════════════════════════ */
   async function saveField(field, value) {
     _uid = _uid || getTelegramUserId();
+    if (!_uid) return false;
 
     if (!_cache) _cache = {};
     _cache[field] = value;
@@ -159,6 +170,7 @@
      ════════════════════════════════════════════════════ */
   async function saveAllFields(fieldsObj) {
     _uid = _uid || getTelegramUserId();
+    if (!_uid) return false;
 
     if (!_cache) _cache = {};
     Object.assign(_cache, fieldsObj);
@@ -197,7 +209,7 @@
     if (_pollingInterval) clearInterval(_pollingInterval);
     _pollingInterval = setInterval(async () => {
       const prevJson = JSON.stringify(_cache);
-      _cacheTime = 0; // Скидаємо таймер кешу для примусового фетчу
+      _cacheTime = 0;
 
       try {
         if (typeof global.setAllSyncing === 'function') global.setAllSyncing('syncing');
@@ -243,6 +255,8 @@
 
     try {
       _uid = _uid || getTelegramUserId();
+      if (!_uid) return;
+
       _sse = new EventSource(`${DB_CONFIG.apiBase}/stream?uid=${_uid}`);
 
       _sse.onmessage = (e) => {
@@ -261,7 +275,6 @@
 
       _sse.onerror = () => {
         disconnectSSE();
-        // При розриві SSE переходимо на резервний фоновий polling
         startPolling(15_000, onUpdate);
       };
     } catch (e) {
@@ -290,11 +303,10 @@
     configure: (opts) => Object.assign(DB_CONFIG, opts || {}),
   };
 
-  // Конфігурація з глобального об'єкта вікна, якщо задано
   if (typeof window !== 'undefined' && window.__DIYA_CONFIG__) {
     Object.assign(DB_CONFIG, window.__DIYA_CONFIG__);
   }
 
-  console.log('[DB] DiyaDB успішно ініціалізовано. Режим:', DB_CONFIG.mode);
+  console.log('[DB] DiyaDB ініціалізовано. Режим:', DB_CONFIG.mode);
 
 })(window);
