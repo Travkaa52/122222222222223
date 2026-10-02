@@ -6,65 +6,78 @@
 :root {
     /* Холст и Панели (1170 × 2532 px) */
     --ds-screen-w: 390px;                       /* 1170px */
+    --ds-status-bar: 40px;                      /* 120px */
     --ds-bottom-nav: 76.67px;                   /* 230px */
 
     /* Главная карточка (980 × 1360 px, ~84% ширины экрана, R: 60px) */
-    --ds-card-w: 326.67px;                      /* 980px */
-    --ds-card-h: 453.33px;                      /* 1360px */
-    --ds-card-r: 20px;                          /* 60px */
-    --ds-card-pad-top: 25px;                    /* 75px */
-    --ds-card-pad-side: 16.67px;                /* 50px */
-    --ds-card-pad-bottom: 25px;                 /* 75px */
+    --ds-card-w: 326.67px;                     /* 980px */
+    --ds-card-h: 453.33px;                     /* 1360px */
+    --ds-card-r: 20px;                         /* 60px */
+    --ds-card-pad-top: 25px;                   /* 75px */
+    --ds-card-pad-side: 16.67px;               /* 50px */
+    --ds-card-pad-bottom: 25px;                /* 75px */
 
     /* Фото профиля (420 × 530 px, R: 35px, отступы: 60px от заголовка, 65px вправо) */
-    --ds-photo-w: 140px;                        /* 420px */
-    --ds-photo-h: 176.67px;                     /* 530px */
-    --ds-photo-r: 11.67px;                      /* 35px */
-    --ds-photo-gap-right: 21.67px;              /* 65px */
-    --ds-header-margin-bottom: 20px;            /* 60px */
+    --ds-photo-w: 140px;                       /* 420px */
+    --ds-photo-h: 176.67px;                    /* 530px */
+    --ds-photo-r: 11.67px;                     /* 35px */
+    --ds-photo-gap-right: 21.67px;             /* 65px */
+    --ds-header-margin-bottom: 20px;           /* 60px */
 
     /* Текст и элементы внутри */
-    --ds-title-fz: 21.33px;                     /* 64px, Bold */
-    --ds-data-block-gap: 16.67px;               /* 50px */
-    --ds-data-label-fz: 12.67px;                /* 38px */
-    --ds-data-val-fz: 14px;                     /* 42px */
+    --ds-title-fz: 21.33px;                    /* 64px, Bold */
+    --ds-data-block-gap: 16.67px;              /* 50px */
+    --ds-data-label-fz: 12.67px;               /* 38px */
+    --ds-data-val-fz: 14px;                    /* 42px */
 
     /* Бегущая строка (980 × 76 px, шрифт 36 px, отступ от фото 60 px) */
-    --ds-marquee-h: 25.33px;                    /* 76px */
-    --ds-marquee-fz: 12px;                      /* 36px */
-    --ds-marquee-margin-top: 20px;              /* 60px */
+    --ds-marquee-h: 25.33px;                   /* 76px */
+    --ds-marquee-fz: 12px;                     /* 36px */
+    --ds-marquee-margin-top: 20px;             /* 60px */
 
     /* ФИО (62 px, line-height 72 px, отступ от плашки 80 px) */
-    --ds-fio-fz: 20.67px;                       /* 62px */
-    --ds-fio-lh: 24px;                          /* 72px */
-    --ds-fio-margin-top: 26.67px;               /* 80px */
+    --ds-fio-fz: 20.67px;                      /* 62px */
+    --ds-fio-lh: 24px;                         /* 72px */
+    --ds-fio-margin-top: 26.67px;              /* 80px */
 
     /* Кнопка «...» (диаметр 92 px, черный круг) */
-    --ds-dots-size: 30.67px;                    /* 92px */
+    --ds-dots-size: 30.67px;                   /* 92px */
 
     /* Пагинация (точки 20 px, gap 28 px, отступ снизу 90 px) */
-    --ds-page-dot: 6.67px;                      /* 20px */
-    --ds-page-gap: 9.33px;                      /* 28px */
-    --ds-page-bottom-pad: 30px;                 /* 90px */
+    --ds-page-dot: 6.67px;                     /* 20px */
+    --ds-page-gap: 9.33px;                     /* 28px */
+    --ds-page-bottom-pad: 30px;                /* 90px */
 
-    /* Нижнее меню */
-    --ds-footer-bar-h: 66.67px;                 /* 200px */
-    --ds-footer-col-w: 78px;                    /* 234px */
-    --ds-footer-icon-size: 21.33px;             /* 64px */
-    --ds-footer-label-fz: 9.33px;               /* 28px */
-    --ds-footer-gap: 5.33px;                    /* 16px */
-    --ds-home-ind-w: 126.67px;                  /* 380px */
-    --ds-home-ind-h: 4px;                       /* 12px */
-    --ds-home-ind-bottom: 6.67px;               /* 20px */
+    /* Нижнее меню (200 px черная панель, 5 колонок по 234 px, иконки 64×64 px, подписи 28 px, gap 16 px) */
+    --ds-footer-bar-h: 66.67px;                /* 200px */
+    --ds-footer-col-w: 78px;                   /* 234px */
+    --ds-footer-icon-size: 21.33px;            /* 64px */
+    --ds-footer-label-fz: 9.33px;              /* 28px */
+    --ds-footer-gap: 5.33px;                   /* 16px */
+    --ds-home-ind-w: 126.67px;                 /* 380px */
+    --ds-home-ind-h: 4px;                      /* 12px */
+    --ds-home-ind-bottom: 6.67px;              /* 20px */
 }
 
-/* Прихована верхня панель */
+/* Статус-бар (верх): 120 px -> 40px */
 .diia-top-bar {
-    display: none !important;
-    height: 0 !important;
-    padding: 0 !important;
+    width: 100%;
+    max-width: var(--ds-screen-w);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: max(var(--ds-status-bar), env(safe-area-inset-top, var(--ds-status-bar))) var(--ds-card-pad-side) 12px var(--ds-card-pad-side);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.diia-top-title {
+    font-family: 'e-UkraineHead', sans-serif !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px !important;
+    color: #000000 !important;
     margin: 0 !important;
-    overflow: hidden !important;
 }
 
 /* Swiper container & document slider */
@@ -81,13 +94,31 @@
     margin: 0 auto !important;
 }
 
+/* 120 FPS GPU Optimization & Layer Promotion */
+.documentSlider {
+    contain: layout paint !important;
+    touch-action: pan-y pinch-zoom !important;
+}
+
+.documentSlider .swiper-wrapper {
+    will-change: transform !important;
+    transform-style: preserve-3d !important;
+    -webkit-transform-style: preserve-3d !important;
+}
+
 .documentSlider .swiper-slide {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     perspective: 1000px !important;
     -webkit-perspective: 1000px !important;
+    transform-style: preserve-3d !important;
+    -webkit-transform-style: preserve-3d !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
     height: var(--ds-card-h) !important;
+    contain: layout paint !important;
+    will-change: transform, opacity !important;
 }
 
 /* Главная карточка: 980 × 1360 px (ширина ~84% экрана, R: 60px) */
@@ -103,8 +134,15 @@
     min-width: 0 !important;
     margin: 0 auto !important;
     border-radius: var(--ds-card-r) !important;
+    cursor: pointer !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    contain: layout paint !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
 }
 
 /* Front side (Glassmorphism): rotateY(0deg) */
@@ -118,6 +156,7 @@
     border: 1px solid rgba(255, 255, 255, 0.65) !important;
     transform: rotateY(0deg) !important;
     -webkit-transform: rotateY(0deg) !important;
+    z-index: 2;
 }
 
 /* Back side (QR & Barcode): rotateY(180deg) */
@@ -129,9 +168,31 @@
     -webkit-transform: rotateY(180deg) !important;
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.12) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
+    z-index: 1;
 }
 
-/* Внутренние отступы (padding) */
+/* Керування видимістю та активністю граней при перевороті */
+.slider.is-flipped .front {
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+.slider.is-flipped .back {
+    pointer-events: auto !important;
+    z-index: 2 !important;
+}
+
+.slider:not(.is-flipped) .front {
+    pointer-events: auto !important;
+    z-index: 2 !important;
+}
+
+.slider:not(.is-flipped) .back {
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+/* Внутренние отступы (padding): Верх 75 px, Бока 50 px, Низ 75 px */
 .front,
 .back {
     width: 100% !important;
@@ -150,7 +211,7 @@
     overflow: hidden !important;
 }
 
-/* Заголовок («єДокумент»): 64 px, Bold */
+/* Заголовок («єДокумент»): 64 px, Bold, отступ от заголовка 60 px */
 .front > h1 {
     font-family: 'e-UkraineHead', sans-serif !important;
     font-size: var(--ds-title-fz) !important;
@@ -162,7 +223,7 @@
     width: auto !important;
 }
 
-/* Фото профиля */
+/* Фото профиля: 420 × 530 px (скругление 35 px), 65 px до текста справа */
 .dataBlock {
     display: flex !important;
     justify-content: flex-start !important;
@@ -185,7 +246,7 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Блок данных */
+/* Блок данных (Дата/РНОКПП): Межблочный отступ 50 px, заголовки 38 px, значения 42 px */
 .dataInfo {
     display: flex !important;
     flex-direction: column !important;
@@ -228,7 +289,7 @@
     letter-spacing: -0.2px !important;
 }
 
-/* Бегущая строка */
+/* Бегущая строка: 980 × 76 px, шрифт 36 px, отступ от фото 60 px */
 .marquee,
 .line1.marquee,
 .line2.marquee {
@@ -252,7 +313,7 @@
     box-sizing: border-box !important;
 }
 
-/* ФИО */
+/* ФИО: 62 px (межстрочный интервал 72 px), отступ от плашки 80 px */
 .fioBlock {
     margin-top: var(--ds-fio-margin-top) !important;
     margin-bottom: 0 !important;
@@ -280,7 +341,7 @@
     max-width: calc(100% - 42px) !important;
 }
 
-/* Кнопка «...» */
+/* Кнопка «...»: Диаметр 92 px, черный круг */
 .moreInfo {
     position: relative !important;
     bottom: auto !important;
@@ -589,7 +650,7 @@
 }
 
 .qrcode {
-    background-image: url(assets/q.png) !important;
+    background-image: url('./assets/q.png') !important;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -598,7 +659,7 @@
 }
 
 .shcode {
-    background-image: url(assets/q.png) !important;
+    background-image: url('./assets/q.png') !important;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -946,7 +1007,7 @@
     width: 100% !important;
     height: 20px !important;
     margin-top: 14px !important;
-    margin-bottom: var(--ds-page-bottom-pad, 30px) !important;
+    margin-bottom: var(--ds-page-bottom-pad, 20px) !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -970,6 +1031,7 @@
     text-align: center !important;
 }
 
+/* Неактивні точки: правильна кругла форма 50%, однаковий розмір 7px, напівпрозорий білий колір rgba(255, 255, 255, 0.45) */
 .documentSlider .swiper-pagination-bullet,
 .document-dots-wrapper .swiper-pagination-bullet {
     display: inline-block !important;
@@ -992,6 +1054,7 @@
     box-sizing: border-box !important;
 }
 
+/* Активна точка: чисто білий колір (#FFFFFF), 100% (1.0) opacity, однаковий круглий розмір 7px */
 .documentSlider .swiper-pagination-bullet-active,
 .document-dots-wrapper .swiper-pagination-bullet-active {
     background: #FFFFFF !important;
@@ -1021,7 +1084,7 @@
     padding: 10px 22px;
     border-radius: 9999px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-    z-index: 9999;
+    z-index: 99999;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.25s ease, transform 0.25s ease;
@@ -1188,6 +1251,9 @@
 
 /* ═══════════════════════════════════════════════════════════════
    НИЖНЕЕ МЕНЮ (Bottom Navigation: 1170 × 2532 px System)
+   * Черная панель: Высота 200 px (5 колонок по ~234 px)
+   * Иконки: 64 × 64 px, подписи 28 px, отступ между ними 16 px
+   * Полоска Home Indicator: 380 × 12 px, отступ снизу 20 px
    ═══════════════════════════════════════════════════════════════ */
 .footer {
     position: absolute !important;
@@ -1265,7 +1331,7 @@
     font-weight: 600 !important;
 }
 
-/* Home Indicator */
+/* Home Indicator: 380 × 12 px, отступ снизу 20 px */
 .home-indicator,
 .footer::after {
     content: '' !important;
@@ -1393,6 +1459,13 @@
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
+}
+.diia-top-bar {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
 }
 
 /* ==========================================================================
@@ -1647,7 +1720,7 @@
     margin-top: 2px !important;
 }
 
-/* ─── WATERMARK OVERLAY ─── */
+/* ─── WATERMARK OVERLAY (Статус підписки: false) ─── */
 .diia-watermark-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -1679,3 +1752,146 @@
     user-select: none !important;
     -webkit-user-select: none !important;
 }
+
+/* ─── Back side (QR & Barcode) Layout & Interactivity ─── */
+.qrcodeBlock {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+    padding: 8px 0 !important;
+}
+
+.qrcodeBlock > span {
+    font-size: 13.5px !important;
+    font-weight: 400 !important;
+    color: #4b5563 !important;
+    text-align: center !important;
+}
+
+.qrcodeBlock > span > span {
+    font-weight: 700 !important;
+    color: #000000 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.qrshBlock {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 !important;
+    width: 100% !important;
+    margin: 6px 0 !important;
+}
+
+.changeCode.qrcode {
+    background-image: url('./assets/q.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    width: min(210px, 58vw) !important;
+    height: min(210px, 58vw) !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.changeCode.shcode {
+    background-image: url('./assets/free-icon-barcode-7797192.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    width: min(250px, 72vw) !important;
+    height: min(85px, 24vw) !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.shText {
+    margin-top: 10px !important;
+    font-size: 15px !important;
+    display: flex !important;
+    gap: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    color: #000000 !important;
+}
+
+.qrChange {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 36px !important;
+    margin-top: auto !important;
+    padding-bottom: 4px !important;
+    z-index: 10 !important;
+}
+
+.qrChange > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: #333333 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+.qrChange > div > div {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    background: #e5e5ea !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.2s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s ease !important;
+}
+
+.qrChange > div > div img {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain !important;
+}
+
+.qrChange > div:active > div {
+    transform: scale(0.92) !important;
+}
+
+/* ─── Адаптивність під кожний пристрій (Responsive Device Scaling) ─── */
+@media (max-height: 720px) {
+    :root {
+        --ds-card-h: 420px;
+        --ds-photo-h: 155px;
+        --ds-photo-w: 124px;
+        --ds-page-bottom-pad: 14px;
+    }
+}
+
+@media (max-height: 640px) {
+    :root {
+        --ds-card-h: 390px;
+        --ds-photo-h: 140px;
+        --ds-photo-w: 112px;
+        --ds-header-margin-bottom: 12px;
+        --ds-marquee-margin-top: 12px;
+        --ds-fio-margin-top: 14px;
+        --ds-page-bottom-pad: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    :root {
+        --ds-card-w: 295px;
+        --ds-title-fz: 18px;
+        --ds-fio-fz: 17px;
+        --ds-data-val-fz: 12.5px;
+    }
+}
+
+
+

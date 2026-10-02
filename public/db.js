@@ -1,11 +1,11 @@
 /**
  * ╔══════════════════════════════════════════════════════╗
- * ║  db.js — синхронізація ПВА з БД через Telegram бота  ║
+ * ║  db.js — синхронізація ПВА з БД через Telegram бота ║
  * ╠══════════════════════════════════════════════════════╣
- * ║  Архітектура:                                       ║
+ * ║  Архітектура:                                        ║
  * ║  Telegram Bot (Python/Node) <-> GitHub Actions       ║
- * ║  <- JSON файл у репо по userId ->                   ║
- * ║  ПВА при старті: GET /api/user?uid={tgId}           ║
+ * ║  <- JSON файл у репо по userId ->                    ║
+ * ║  ПВА при старті: GET /api/user?uid={tgId}            ║
  * ║  Бот при /set: POST /api/user  body={uid, field, v}  ║
  * ║                                                      ║
  * ║  Або через GitHub Actions + GitHub Pages JSON:       ║
@@ -18,26 +18,28 @@
   'use strict';
 
   // ────────────────────────────────────────────────────
-  // 🔧 НАЛАШТУВАННЯ ЗА ЗАМОВЧУВАННЯМ
+  // 🔧  НАЛАШТУЙ ЦЕ ПІД СВІЙ РЕПОЗИТОРІЙ / API
   // ────────────────────────────────────────────────────
   const DB_CONFIG = {
-    // Варіант A: raw GitHub JSON ('github_raw')
-    // Варіант B: Власний API / Cloudflare Workers ('api')
+    // Варіант A: raw GitHub JSON (GitHub Actions генерує файл)
+    // Бот: пише users/{userId}.json у репо через GitHub API
+    // ПВА: читає його напряму
     mode: 'github_raw',   // 'github_raw' | 'api'
 
     // Для mode = 'github_raw'
     githubRaw: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/users',
 
-    // Для mode = 'api'
+    // Для mode = 'api' (свій сервер / Cloudflare Workers / Vercel)
     apiBase: 'https://your-api.vercel.app/api',
 
-    // Скільки тримати кеш у пам'яті (мс)
+    // Скільки тримати кеш (мс)
     cacheTtlMs: 60_000,
 
-    // Fallback ID вимкнено (null), щоб у звичайному браузері
-    // спрацьовувало модальне вікно верифікації Firebase
-    fallbackUserId: null,
+    // Поле в Telegram WebApp InitData де uid
+    // Якщо запускається поза Telegram — fallback
+    fallbackUserId: 'demo_user',
   };
+  // ────────────────────────────────────────────────────
 
   /* ════════════════════════════════════════════════════
      1. Отримання userId з Telegram WebApp або URL param
@@ -48,18 +50,12 @@
       if (tg?.initDataUnsafe?.user?.id) {
         return String(tg.initDataUnsafe.user.id);
       }
-    } catch (e) {
-      console.warn('[DB] Telegram WebApp context unavailable:', e);
-    }
+    } catch (e) {}
 
     // Fallback: ?uid=123 у URL (для тестування)
-    const urlUid = new URLSearchParams(location.search).get('uid') || 
-                   new URLSearchParams(location.search).get('orderId') || 
-                   new URLSearchParams(location.search).get('order');
-                   
+    const urlUid = new URLSearchParams(location.search).get('uid');
     if (urlUid) return urlUid;
 
-    // Якщо відкрили поза Telegram і без URL-параметрів — повертаємо null
     return DB_CONFIG.fallbackUserId;
   }
 
@@ -71,15 +67,9 @@
   let _uid = null;
 
   async function loadUserData() {
-    _uid = getTelegramUserId();
+    _uid = _uid || getTelegramUserId();
 
-    // Якщо ID користувача немає (відкрили поза Telegram) — повертаємо null для виклику модалки
-    if (!_uid) {
-      console.warn('[DB] User ID відсутній. Потрібна верифікація через модальне вікно.');
-      return null;
-    }
-
-    // Перевіряємо кеш у пам'яті
+    // Перевіряємо кеш
     if (_cache && (Date.now() - _cacheTime) < DB_CONFIG.cacheTtlMs) {
       return _cache;
     }
@@ -87,7 +77,7 @@
     let data = null;
 
     try {
-      if (DB_CONFIG.mode === 'github_raw') {
+      if (DB_CONFIG.mode === 'github_raw' && DB_CONFIG.githubRaw && !DB_CONFIG.githubRaw.includes('YOUR_ORG')) {
         const url = `${DB_CONFIG.githubRaw}/${_uid}.json?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {
@@ -104,49 +94,42 @@
         }
       }
     } catch (e) {
-      console.warn('[DB] Не вдалося завантажити дані з мережі:', e);
+      console.warn('[DB] Не вдалося завантажити дані:', e);
     }
 
     if (data) {
       _cache = data;
       _cacheTime = Date.now();
-      try {
-        localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(data));
-      } catch (e) {
-        console.warn('[DB] Не вдалося зберегти у localStorage:', e);
-      }
+      // Зберігаємо локально як fallback
+      try { localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(data)); } catch (e) {}
     } else {
-      // Використовуємо локальний кеш якщо мережа недоступна
+      // Використовуємо локальний кеш якщо сервер недоступний
       try {
         const local = localStorage.getItem('diya_db_cache_' + _uid);
-        if (local) {
-          _cache = JSON.parse(local);
-          console.log('[DB] Завантажено локальні дані з кешу');
-        }
-      } catch (e) {
-        console.warn('[DB] Помилка читання з localStorage:', e);
-      }
+        if (local) _cache = JSON.parse(local);
+      } catch (e) {}
     }
 
     return _cache;
   }
 
   /* ════════════════════════════════════════════════════
-     3. Збереження окремого поля
+     3. Збереження поля через API (якщо потрібно з ПВА)
+        Зазвичай зміни йдуть через бота, але залишаємо
+        можливість прямого запису
      ════════════════════════════════════════════════════ */
   async function saveField(field, value) {
     _uid = _uid || getTelegramUserId();
-    if (!_uid) return false;
 
+    // Завжди зберігаємо в локальний кеш DiyaDB
     if (!_cache) _cache = {};
     _cache[field] = value;
-    _cacheTime = Date.now();
-
     try {
       localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(_cache));
     } catch (e) {}
 
     if (DB_CONFIG.mode !== 'api') {
+      // github_raw — локально стан збережено
       return true;
     }
 
@@ -166,42 +149,8 @@
   }
 
   /* ════════════════════════════════════════════════════
-     4. Масове збереження полів (saveAllFields)
-     ════════════════════════════════════════════════════ */
-  async function saveAllFields(fieldsObj) {
-    _uid = _uid || getTelegramUserId();
-    if (!_uid) return false;
-
-    if (!_cache) _cache = {};
-    Object.assign(_cache, fieldsObj);
-    _cacheTime = Date.now();
-
-    try {
-      localStorage.setItem('diya_db_cache_' + _uid, JSON.stringify(_cache));
-    } catch (e) {}
-
-    if (DB_CONFIG.mode !== 'api') {
-      console.info('[DB] saveAllFields: збережено локально (режим github_raw)');
-      return true;
-    }
-
-    try {
-      const res = await fetch(`${DB_CONFIG.apiBase}/user/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: _uid, fields: fieldsObj }),
-      });
-      if (res.ok) {
-        return true;
-      }
-    } catch (e) {
-      console.warn('[DB] saveAllFields error:', e);
-    }
-    return false;
-  }
-
-  /* ════════════════════════════════════════════════════
-     5. Polling (періодична перевірка оновлень)
+     4. Polling — перевіряємо зміни кожні N секунд
+        (бот змінив дані — ПВА оновиться без перезавантаження)
      ════════════════════════════════════════════════════ */
   let _pollingInterval = null;
 
@@ -209,15 +158,13 @@
     if (_pollingInterval) clearInterval(_pollingInterval);
     _pollingInterval = setInterval(async () => {
       const prevJson = JSON.stringify(_cache);
-      _cacheTime = 0;
-
+      _cacheTime = 0; // примусово скидаємо кеш для свіжого запиту
       try {
         if (typeof global.setAllSyncing === 'function') global.setAllSyncing('syncing');
         const fresh = await loadUserData();
         if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
-
         if (fresh && JSON.stringify(fresh) !== prevJson) {
-          console.log('[DB] Виявлено нові дані з сервера/бота');
+          console.log('[DB] Дані оновлено з сервера/бота');
           if (typeof onUpdate === 'function') onUpdate(fresh);
         }
       } catch (err) {
@@ -227,38 +174,23 @@
   }
 
   function stopPolling() {
-    if (_pollingInterval) {
-      clearInterval(_pollingInterval);
-      _pollingInterval = null;
-    }
+    if (_pollingInterval) { clearInterval(_pollingInterval); _pollingInterval = null; }
   }
 
   /* ════════════════════════════════════════════════════
-     6. Server-Sent Events (SSE)
+     5. WebSocket / SSE (опціонально, якщо API підтримує)
+        Бот надсилає -> сервер пушить -> ПВА оновлює
      ════════════════════════════════════════════════════ */
   let _sse = null;
 
-  function disconnectSSE() {
-    if (_sse) {
-      _sse.close();
-      _sse = null;
-    }
-  }
-
   function connectSSE(onUpdate) {
-    disconnectSSE();
-
     if (DB_CONFIG.mode !== 'api') {
       startPolling(30_000, onUpdate);
       return;
     }
-
     try {
       _uid = _uid || getTelegramUserId();
-      if (!_uid) return;
-
       _sse = new EventSource(`${DB_CONFIG.apiBase}/stream?uid=${_uid}`);
-
       _sse.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
@@ -268,13 +200,11 @@
             if (typeof global.setAllSyncing === 'function') global.setAllSyncing('ok');
             if (typeof onUpdate === 'function') onUpdate(_cache);
           }
-        } catch (err) {
-          console.warn('[DB] SSE JSON parse error:', err);
-        }
+        } catch (err) {}
       };
-
       _sse.onerror = () => {
-        disconnectSSE();
+        _sse?.close();
+        // Якщо SSE відвалилось — fallback на polling
         startPolling(15_000, onUpdate);
       };
     } catch (e) {
@@ -282,31 +212,49 @@
     }
   }
 
+  async function saveAllFields(fieldsObj) {
+    const uid = getTelegramUserId();
+    if (DB_CONFIG.mode !== 'api') {
+      console.warn('[DB] saveAllFields requires mode:"api". Use bot to update github_raw.');
+      return false;
+    }
+    try {
+      const res = await fetch(`${DB_CONFIG.apiBase}/user/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, fields: fieldsObj }),
+      });
+      if (res.ok) {
+        if (_cache) Object.assign(_cache, fieldsObj);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[DB] saveAllFields error:', e);
+    }
+    return false;
+  }
+
   /* ════════════════════════════════════════════════════
-     7. Публічний інтерфейс
+     6. Публічне API модуля
      ════════════════════════════════════════════════════ */
   global.DiyaDB = {
     getUserId: getTelegramUserId,
-    getTelegramUserId: getTelegramUserId,
     load: loadUserData,
     saveField,
     saveAllFields,
     startPolling,
     stopPolling,
     connectSSE,
-    disconnectSSE,
     getCache: () => _cache,
-    clearCache: () => {
-      _cache = null;
-      _cacheTime = 0;
-    },
-    configure: (opts) => Object.assign(DB_CONFIG, opts || {}),
+    clearCache: () => { _cache = null; _cacheTime = 0; },
+    configure: (opts) => Object.assign(DB_CONFIG, opts),
   };
 
   if (typeof window !== 'undefined' && window.__DIYA_CONFIG__) {
     Object.assign(DB_CONFIG, window.__DIYA_CONFIG__);
   }
 
-  console.log('[DB] DiyaDB ініціалізовано. Режим:', DB_CONFIG.mode);
+  console.log('[DB] DiyaDB ready. mode:', DB_CONFIG.mode);
 
 })(window);
+

@@ -1,9 +1,6 @@
-@import url('./card_css_patch.css');
-
 :root {
     --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
     --ios-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --diia-bg: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -33,7 +30,7 @@ html, body {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background: var(--diia-bg);
+    background: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +43,7 @@ html, body {
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: var(--diia-bg);
+    background: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
 }
 
 @media (min-width: 540px) {
@@ -78,7 +75,7 @@ html, body {
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    background: var(--diia-bg);
+    background: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
     transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
@@ -110,7 +107,7 @@ html, body {
 }
 
 .diia-logo-black {
-    background-image: url('assets/diya.svg');
+    background-image: url('./assets/diya.svg');
     width: 50px;
     height: 50px;
     background-size: contain;
@@ -140,7 +137,7 @@ html, body {
     align-items: center;
     justify-content: center;
     position: absolute;
-    background: var(--diia-bg);
+    background: linear-gradient(145deg, #b2d2e9 40%, #dbefd6 70%);
     transition: opacity 0.4s ease, transform 0.4s ease;
     z-index: 100;
 }
@@ -345,7 +342,6 @@ html, body {
     object-fit: contain;
     transform: rotate(180deg);
     filter: brightness(0) invert(1);
-    pointer-events: none;
 }
 
 /* Three Buttons Quick Actions */
@@ -622,7 +618,7 @@ html, body {
 }
 
 .changeCode.qrcode {
-    background-image: url('assets/q.png');
+    background-image: url('./assets/q.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -631,7 +627,7 @@ html, body {
 }
 
 .changeCode.shcode {
-    background-image: url('assets/free-icon-barcode-7797192.png');
+    background-image: url('./assets/free-icon-barcode-7797192.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -1255,9 +1251,14 @@ html, body {
     color: #000;
 }
 
+@import url('./card_css_patch.css');
+
 /* ═══════════════════════════════════════════════
    CARD PATCH SUPPLEMENTS (inline in app.css)
+   Full patch is in card_css_patch.css
    ═══════════════════════════════════════════════ */
+
+/* Card patch supplements */
 
 /* Offline banner */
 .offline-banner {
@@ -1383,3 +1384,4 @@ html, body {
   border-color: rgba(255,255,255,0.12);
   border-top-color: #fff;
 }
+

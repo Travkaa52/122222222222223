@@ -1,68 +1,58 @@
 // Service Worker для Дія PWA
 // Precache App Shell + Robust Cache-First для відео і шрифтів + Stale-While-Revalidate для динамічних документів
 
-const CACHE_NAME = 'diia-app-shell-v7';
-const MEDIA_FONTS_CACHE_NAME = 'diia-media-fonts-v7';
-const DOCUMENTS_CACHE_NAME = 'diia-documents-data-v7';
+const CACHE_NAME = 'diia-app-shell-v8';
+const MEDIA_FONTS_CACHE_NAME = 'diia-media-fonts-v8';
+const DOCUMENTS_CACHE_NAME = 'diia-documents-data-v8';
 
-// 1. Критичні ресурси оболонки додатку (App Shell)
+// 1. Критичні ресурси оболонки додатку (App Shell) - відносні шляхи для сумісності з GitHub Pages
 const APP_SHELL_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/assets/manifest.json',
-  '/logo.mp4',
-  '/background_gradient.mp4',
-  '/assets/logo.mp4',
-  '/assets/background_gradient.mp4',
-  '/app.css',
-  '/card_css_patch.css',
-  '/firebase_modal.css',
-  '/app.js',
-  '/main.js',
-  '/values.js',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-  '/pwa-maskable-512x512.png',
-  '/icon-72x72.png',
-  '/icon-96x96.png',
-  '/icon-128x128.png',
-  '/icon-144x144.png',
-  '/icon-152x152.png',
-  '/icon-192x192.png',
-  '/icon-384x384.png',
-  '/icon-512x512.png',
-  '/icon-maskable-512x512.png',
-  '/apple-touch-icon.png',
-  '/assets/e-Ukraine-Regular.woff',
-  '/assets/e-Ukraine-Regular.woff2',
-  '/assets/e-UkraineHead-Medium.woff',
-  '/assets/e-UkraineHead-Bold.woff',
-  '/assets/swiper-bundle.min.css',
-  '/assets/swiper-bundle.min.js',
-  '/assets/jquery.min.js',
-  '/assets/anime.js',
-  '/assets/diya.svg',
-  '/assets/photo_passport.jpg',
-  '/assets/user_photo.jpg',
-  '/assets/gerb.png',
-  '/assets/qr.svg',
-  '/assets/dots.png',
-  '/assets/copy.png',
-  '/assets/addDocument.png',
-  '/assets/arrow.svg'
+  './',
+  './index.html',
+  './manifest.json',
+  './app.css',
+  './card_css_patch.css',
+  './firebase_modal.css',
+  './app.js',
+  './main.js',
+  './values.js',
+  './values.json',
+  './icon-72x72.png',
+  './icon-96x96.png',
+  './icon-128x128.png',
+  './icon-144x144.png',
+  './icon-152x152.png',
+  './icon-192x192.png',
+  './icon-384x384.png',
+  './icon-512x512.png',
+  './apple-touch-icon.png',
+  './assets/e-Ukraine-Regular.woff',
+  './assets/e-Ukraine-Regular.woff2',
+  './assets/e-UkraineHead-Medium.woff',
+  './assets/e-UkraineHead-Bold.woff',
+  './assets/anime.js',
+  './assets/diya.svg',
+  './assets/user_photo.jpg',
+  './assets/gerb.png',
+  './assets/q.png',
+  './assets/qr-code.png',
+  './assets/free-icon-barcode-7797192.png',
+  './assets/dots.png',
+  './assets/watermark.png'
 ];
 
 // Встановлення та попереднє кешування App Shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
+      const scopeUrl = new URL(self.registration.scope);
       await Promise.allSettled(
-        APP_SHELL_ASSETS.map((assetUrl) =>
-          cache.add(assetUrl).catch((err) => {
-            console.warn('[SW] Не вдалося закешувати:', assetUrl, err);
-          })
-        )
+        APP_SHELL_ASSETS.map((assetUrl) => {
+          const resolvedUrl = new URL(assetUrl, scopeUrl).toString();
+          return cache.add(resolvedUrl).catch((err) => {
+            console.warn('[SW] Не вдалося закешувати:', resolvedUrl, err);
+          });
+        })
       );
     }).then(() => self.skipWaiting())
   );
