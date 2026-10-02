@@ -94,13 +94,31 @@
     margin: 0 auto !important;
 }
 
+/* 120 FPS GPU Optimization & Layer Promotion */
+.documentSlider {
+    contain: layout paint !important;
+    touch-action: pan-y pinch-zoom !important;
+}
+
+.documentSlider .swiper-wrapper {
+    will-change: transform !important;
+    transform-style: preserve-3d !important;
+    -webkit-transform-style: preserve-3d !important;
+}
+
 .documentSlider .swiper-slide {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     perspective: 1000px !important;
     -webkit-perspective: 1000px !important;
+    transform-style: preserve-3d !important;
+    -webkit-transform-style: preserve-3d !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
     height: var(--ds-card-h) !important;
+    contain: layout paint !important;
+    will-change: transform, opacity !important;
 }
 
 /* Главная карточка: 980 × 1360 px (ширина ~84% экрана, R: 60px) */
@@ -116,8 +134,15 @@
     min-width: 0 !important;
     margin: 0 auto !important;
     border-radius: var(--ds-card-r) !important;
+    cursor: pointer !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    contain: layout paint !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
 }
 
 /* Front side (Glassmorphism): rotateY(0deg) */
@@ -131,6 +156,7 @@
     border: 1px solid rgba(255, 255, 255, 0.65) !important;
     transform: rotateY(0deg) !important;
     -webkit-transform: rotateY(0deg) !important;
+    z-index: 2;
 }
 
 /* Back side (QR & Barcode): rotateY(180deg) */
@@ -142,6 +168,28 @@
     -webkit-transform: rotateY(180deg) !important;
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.12) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
+    z-index: 1;
+}
+
+/* Керування видимістю та активністю граней при перевороті */
+.slider.is-flipped .front {
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+.slider.is-flipped .back {
+    pointer-events: auto !important;
+    z-index: 2 !important;
+}
+
+.slider:not(.is-flipped) .front {
+    pointer-events: auto !important;
+    z-index: 2 !important;
+}
+
+.slider:not(.is-flipped) .back {
+    pointer-events: none !important;
+    z-index: 1 !important;
 }
 
 /* Внутренние отступы (padding): Верх 75 px, Бока 50 px, Низ 75 px */
@@ -602,7 +650,7 @@
 }
 
 .qrcode {
-    background-image: url(assets/q.png) !important;
+    background-image: url('./assets/q.png') !important;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -611,7 +659,7 @@
 }
 
 .shcode {
-    background-image: url(assets/q.png) !important;
+    background-image: url('./assets/q.png') !important;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -1703,6 +1751,146 @@
     pointer-events: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+}
+
+/* ─── Back side (QR & Barcode) Layout & Interactivity ─── */
+.qrcodeBlock {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+    padding: 8px 0 !important;
+}
+
+.qrcodeBlock > span {
+    font-size: 13.5px !important;
+    font-weight: 400 !important;
+    color: #4b5563 !important;
+    text-align: center !important;
+}
+
+.qrcodeBlock > span > span {
+    font-weight: 700 !important;
+    color: #000000 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.qrshBlock {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 !important;
+    width: 100% !important;
+    margin: 6px 0 !important;
+}
+
+.changeCode.qrcode {
+    background-image: url('./assets/q.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    width: min(210px, 58vw) !important;
+    height: min(210px, 58vw) !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.changeCode.shcode {
+    background-image: url('./assets/free-icon-barcode-7797192.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    width: min(250px, 72vw) !important;
+    height: min(85px, 24vw) !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.shText {
+    margin-top: 10px !important;
+    font-size: 15px !important;
+    display: flex !important;
+    gap: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    color: #000000 !important;
+}
+
+.qrChange {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 36px !important;
+    margin-top: auto !important;
+    padding-bottom: 4px !important;
+    z-index: 10 !important;
+}
+
+.qrChange > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: #333333 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+.qrChange > div > div {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    background: #e5e5ea !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.2s cubic-bezier(0.25, 1, 0.5, 1), transform 0.15s ease !important;
+}
+
+.qrChange > div > div img {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain !important;
+}
+
+.qrChange > div:active > div {
+    transform: scale(0.92) !important;
+}
+
+/* ─── Адаптивність під кожний пристрій (Responsive Device Scaling) ─── */
+@media (max-height: 720px) {
+    :root {
+        --ds-card-h: 420px;
+        --ds-photo-h: 155px;
+        --ds-photo-w: 124px;
+        --ds-page-bottom-pad: 14px;
+    }
+}
+
+@media (max-height: 640px) {
+    :root {
+        --ds-card-h: 390px;
+        --ds-photo-h: 140px;
+        --ds-photo-w: 112px;
+        --ds-header-margin-bottom: 12px;
+        --ds-marquee-margin-top: 12px;
+        --ds-fio-margin-top: 14px;
+        --ds-page-bottom-pad: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    :root {
+        --ds-card-w: 295px;
+        --ds-title-fz: 18px;
+        --ds-fio-fz: 17px;
+        --ds-data-val-fz: 12.5px;
+    }
 }
 
 

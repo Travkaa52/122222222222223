@@ -77,7 +77,7 @@
     let data = null;
 
     try {
-      if (DB_CONFIG.mode === 'github_raw') {
+      if (DB_CONFIG.mode === 'github_raw' && DB_CONFIG.githubRaw && !DB_CONFIG.githubRaw.includes('YOUR_ORG')) {
         const url = `${DB_CONFIG.githubRaw}/${_uid}.json?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {

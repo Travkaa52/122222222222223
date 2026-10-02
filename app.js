@@ -791,6 +791,67 @@ function initSecuritySettings() {
     closeSettingsSheet();
     window.fbVerificationUI?.show();
   });
+
+  // PWA Install Prompt wiring
+  let deferredPrompt = null;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+  const installSublabel = document.getElementById('pwaInstallSublabel');
+
+  if (isStandalone && installSublabel) {
+    installSublabel.textContent = 'Застосунок встановлено на пристрій ✓';
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installSublabel && !isStandalone) {
+      installSublabel.textContent = 'Натисніть для встановлення в один клік';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    if (installSublabel) installSublabel.textContent = 'Застосунок встановлено на пристрій ✓';
+    if (typeof window.showNotification === 'function') {
+      window.showNotification('Дію успішно встановлено на екран!');
+    }
+  });
+
+  const iosModal = document.getElementById('iosPwaInstallModal');
+  document.getElementById('btnCloseIosPwaModal')?.addEventListener('click', () => {
+    iosModal?.classList.remove('active');
+  });
+
+  document.getElementById('rowInstallPwa')?.addEventListener('click', async () => {
+    if (isStandalone) {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Застосунок вже встановлено на пристрій ✓');
+      }
+      return;
+    }
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        deferredPrompt = null;
+      }
+      closeSettingsSheet();
+      return;
+    }
+
+    if (isIOS) {
+      closeSettingsSheet();
+      iosModal?.classList.add('active');
+      return;
+    }
+
+    if (typeof window.showNotification === 'function') {
+      window.showNotification('Скористайтеся меню браузера для встановлення застосунку');
+    }
+  });
+
   document.getElementById('settingsSheetModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'settingsSheetModal') closeSettingsSheet();
   });

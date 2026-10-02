@@ -18,65 +18,93 @@
     <meta name="apple-mobile-web-app-title" content="Дія" />
 
     <!-- Web App Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="./manifest.json" />
 
     <!-- Multi-size Icons (72x72 to 512x512) -->
-    <link rel="icon" type="image/png" sizes="72x72" href="/icon-72x72.png" />
-    <link rel="icon" type="image/png" sizes="96x96" href="/icon-96x96.png" />
-    <link rel="icon" type="image/png" sizes="128x128" href="/icon-128x128.png" />
-    <link rel="icon" type="image/png" sizes="144x144" href="/icon-144x144.png" />
-    <link rel="icon" type="image/png" sizes="152x152" href="/icon-152x152.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
-    <link rel="icon" type="image/png" sizes="384x384" href="/icon-384x384.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    <link rel="icon" type="image/png" sizes="72x72" href="./icon-72x72.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="./icon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="./icon-128x128.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="./icon-144x144.png" />
+    <link rel="icon" type="image/png" sizes="152x152" href="./icon-152x152.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="384x384" href="./icon-384x384.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512x512.png" />
 
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="144x144" href="/icon-144x144.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
-    <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="./icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="./icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192x192.png" />
+    <link rel="apple-touch-icon-precomposed" href="./apple-touch-icon.png" />
 
     <title>Дія</title>
 
     <link type="image/x-icon"
-          href="assets/favicon.png"
+          href="./assets/favicon.png"
           rel="shortcut icon" />
 
-    <script src="/assets/anime.js"></script>
+    <!-- Core App State & Values (Завжди завантажуємо першим) -->
+    <script>
+      var isRightsEnabled = true;
+      var isStudyEnabled = true;
+      var isZagranEnabled = true;
+      var isDiplomaEnabled = true;
+      window.isRightsEnabled = true;
+      window.isStudyEnabled = true;
+      window.isZagranEnabled = true;
+      window.isDiplomaEnabled = true;
+      window.entryPin = '1234';
+      window.allowBiometricSkip = true;
+    </script>
+    <script src="./values.js"></script>
+
+    <!-- Anime.js (місцевий відносний скрипт з надійним CDN fallback) -->
+    <script src="./assets/anime.js"></script>
+    <script>
+      if (typeof window.anime === 'undefined') {
+        document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"><\/script>');
+      }
+    </script>
+    <script>
+      // Безпечний fallback для anime якщо мережа недоступна
+      if (typeof window.anime === 'undefined') {
+        window.anime = function(cfg) {
+          if (cfg && typeof cfg.complete === 'function') setTimeout(cfg.complete, (cfg.duration || 300));
+          return { play(){}, pause(){}, restart(){} };
+        };
+      }
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="./app.css" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-    <script src="/assets/jquery.marquee.min.js"type="text/javascript"></script>
 
     <!-- Card styles — load AFTER app.css -->
-    <link rel="stylesheet" href="card_css_patch.css?v=6">
-    <link rel="stylesheet" href="firebase_modal.css?v=2">
+    <link rel="stylesheet" href="./card_css_patch.css?v=6">
+    <link rel="stylesheet" href="./firebase_modal.css?v=2">
 
     <!-- DB sync module — load BEFORE app.js -->
-    <script src="db.js"></script>
+    <script src="./db.js"></script>
 
     <!-- DiyaDB config — load BEFORE app.js, AFTER db.js -->
     <script>
       window.__DIYA_CONFIG__ = {
         mode: 'github_raw',
-        // ← USER MUST REPLACE with their real repo:
         githubRaw: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/users',
         cacheTtlMs: 45000,
         pollIntervalMs: 30000
       };
       document.addEventListener('DOMContentLoaded', function () {
-        if (typeof DiyaDB !== 'undefined') {
+        if (typeof DiyaDB !== 'undefined' && !window.__DIYA_CONFIG__.githubRaw.includes('YOUR_ORG')) {
           DiyaDB.configure(window.__DIYA_CONFIG__);
         }
       });
@@ -137,7 +165,7 @@
         font-family: 'e-Ukraine';
         font-weight: 400;
         font-display: swap;
-        src: local('e-Ukraine'), local('e-Ukraine-Regular'), url('assets/e-Ukraine-Regular.woff') format('woff');
+        src: local('e-Ukraine'), local('e-Ukraine-Regular'), url(\'./assets/e-Ukraine-Regular.woff\') format('woff');
     }
 
     .nonono {
@@ -146,15 +174,14 @@
 
     @font-face {
         font-family: 'e-UkraineHead';
-        src: url('assets/e-UkraineHead-Light.woff') format('woff');
-        src: local('e-UkraineHead'), local('e-UkraineHead-Medium'), url('assets/e-UkraineHead-Medium.woff') format('woff');
+                src: local('e-UkraineHead'), local('e-UkraineHead-Medium'), url(\'./assets/e-UkraineHead-Medium.woff\') format('woff');
         font-weight: 300;
         font-style: normal;
         font-display: swap;
     }
     @font-face {
         font-family: 'e-UkraineHead';
-        src: url('assets/e-UkraineHead-Medium.woff') format('woff');
+        src: url(\'./assets/e-UkraineHead-Medium.woff\') format('woff');
         font-weight: 500;
         font-style: normal;
         font-display: swap;
@@ -162,7 +189,7 @@
 
     @font-face {
         font-family: 'e-UkraineHead';
-        src: url('assets/e-UkraineHead-Bold.woff') format('woff');
+        src: url(\'./assets/e-UkraineHead-Bold.woff\') format('woff');
         font-weight: 700;
         font-style: normal;
         font-display: swap;
@@ -207,9 +234,8 @@
 
     @font-face {
      font-family: 'e-Ukraine-Regular';
-     src: url('assets/e-Ukraine-Regular.otf') format('opentype'), /* Якщо файл .otf */
-     url('assets/e-Ukraine-Regular.woff2') format('woff2'), /* Якщо є .woff2 (краще для PWA) */
-     url('assets/e-Ukraine-Regular.ttf') format('truetype'); /* Якщо файл .ttf */
+     src: url(\'./assets/e-Ukraine-Regular.woff2\') format('woff2'),
+          url(\'./assets/e-Ukraine-Regular.woff\') format('woff');
      font-weight: normal;
      font-style: normal;
  }
@@ -247,7 +273,7 @@
 
     /* Стилі для іконок */
     .diia-logo-black {
-        background-image: url('assets/diya.svg');
+        background-image: url(\'./assets/diya.svg\');
         width: 50px;
         height: 50px;
         background-size: contain;
@@ -281,12 +307,19 @@
         z-index: 0;
         pointer-events: none;
         display: block;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
+        contain: strict;
     }
 
     .video-background video {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
     }
 
     * {
@@ -1346,7 +1379,7 @@
     }
 
     .qrcode {
-        background-image: url(assets/q.png);
+        background-image: url(\'./assets/q.png\');
         background-size: contain;
         background-position: center;
         width: 300px;
@@ -1355,7 +1388,7 @@
     }
 
     .shcode {
-        background-image: url(assets/q.png);
+        background-image: url(\'./assets/q.png\');
         background-size: contain;
         background-position: center;
         width: 245px;
@@ -1381,31 +1414,31 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoPasport">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div class="border" style="padding-left: 12px">
                     <img style="width: 22px; height: 22px"
-                         src="assets/vitag.png"
+                         src="./assets/vitag.png"
                          alt="" />
                     <span>Витяг про місце проживання</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div class="border">
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
                 <div class="qrChangeInfo">
                     <div data-index="pasport" id="openQr">
                         <div style="background: black">
-                            <img src="assets/qr-code.png"
+                            <img src="./assets/qr-code.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1415,7 +1448,7 @@
                     </div>
                     <div data-index="pasport" id="openSh">
                         <div style="background: black">
-                            <img src="assets/free-icon-barcode-7797192.png"
+                            <img src="./assets/free-icon-barcode-7797192.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1434,31 +1467,31 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoZagran">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div class="border" style="padding-left: 12px">
                     <img style="width: 22px; height: 22px"
-                         src="assets/vitag.png"
+                         src="./assets/vitag.png"
                          alt="" />
                     <span>Витяг про місце проживання</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div class="border">
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
                 <div class="qrChangeInfo">
                     <div data-index="zagran" id="openQr">
                         <div style="background: black">
-                            <img src="assets/qr-code.png"
+                            <img src="./assets/qr-code.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1468,7 +1501,7 @@
                     </div>
                     <div data-index="zagran" id="openSh">
                         <div style="background: black">
-                            <img src="assets/free-icon-barcode-7797192.png"
+                            <img src="./assets/free-icon-barcode-7797192.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1487,25 +1520,25 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoStudy">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div class="border">
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
                 <div class="qrChangeInfo">
                     <div data-index="study" id="openQr">
                         <div style="background: black">
-                            <img src="assets/qr-code.png"
+                            <img src="./assets/qr-code.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1515,7 +1548,7 @@
                     </div>
                     <div data-index="study" id="openSh">
                         <div style="background: black">
-                            <img src="assets/free-icon-barcode-7797192.png"
+                            <img src="./assets/free-icon-barcode-7797192.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1534,25 +1567,25 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoPodatki">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div class="border">
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
                 <div class="qrChangeInfo">
                     <div data-index="podatki" id="openQr">
                         <div style="background: black">
-                            <img src="assets/qr-code.png"
+                            <img src="./assets/qr-code.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1562,7 +1595,7 @@
                     </div>
                     <div data-index="podatki" id="openSh">
                         <div style="background: black">
-                            <img src="assets/free-icon-barcode-7797192.png"
+                            <img src="./assets/free-icon-barcode-7797192.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1581,25 +1614,25 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoDip">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div class="border">
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
                 <div class="qrChangeInfo">
                     <div data-index="dip" id="openQr">
                         <div style="background: black">
-                            <img src="assets/qr-code.png"
+                            <img src="./assets/qr-code.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1609,7 +1642,7 @@
                     </div>
                     <div data-index="dip" id="openSh">
                         <div style="background: black">
-                            <img src="assets/free-icon-barcode-7797192.png"
+                            <img src="./assets/free-icon-barcode-7797192.png"
                                  style="
                                                 filter: brightness(0) invert(1);
                                             "
@@ -1628,23 +1661,23 @@
         <div>
             <div class="main_block">
                 <div id="fullInfoeDoc">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div class="border" id="openQr" data-index="eDoc">
-                    <img src="assets/qr-code.png" alt="" />
+                    <img src="./assets/qr-code.png" alt="" />
                     <span>Код для перевірки</span>
                 </div>
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div>
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
             </div>
@@ -1655,20 +1688,20 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoPrava">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
 
                 <div>
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div>
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div>
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
             </div>
@@ -1684,19 +1717,19 @@
         <div>
             <div class="main_block">
                 <div class="border" id="fullInfoZbroya">
-                    <img src="assets/document.png" alt="" />
+                    <img src="./assets/document.png" alt="" />
                     <span>Повна інформація</span>
                 </div>
                 <div class="border">
-                    <img src="assets/star.png" alt="" />
+                    <img src="./assets/star.png" alt="" />
                     <span>Оцінити документ</span>
                 </div>
                 <div class="border">
-                    <img src="assets/exchange.png" alt="" />
+                    <img src="./assets/exchange.png" alt="" />
                     <span>Змінити порядок документів</span>
                 </div>
                 <div>
-                    <img src="assets/question.png" alt="" />
+                    <img src="./assets/question.png" alt="" />
                     <span>Питання та відповіді</span>
                 </div>
             </div>
@@ -1708,13 +1741,13 @@
 
     <div class="loadpage" id="loadpage">
         <video id="introLogoVideo" class="loadpage-video" autoplay muted playsinline preload="auto">
-            <source src="assets/logo.mp4" type="video/mp4">
+            <source src="./assets/logo.mp4" type="video/mp4">
         </video>
     </div>
 
     <div class="video-background" id="video-background">
         <video id="myVideo" muted loop playsinline preload="auto" style="width: 100%; height: 100%; object-fit: cover;">
-            <source id="videoSource" src="assets/background_gradient.mp4" type="video/mp4">
+            <source id="videoSource" src="./assets/background_gradient.mp4" type="video/mp4">
         </video>
     </div>
     <div id="notification" class="notification">Номер скопійовано</div>
@@ -1769,7 +1802,7 @@
             <button type="button">7</button>
             <button type="button">8</button>
             <button type="button">9</button>
-            <img id="btn-biometrics" class="btn-biometrics" src="assets/biometrics.png" alt="Face ID" />
+            <img id="btn-biometrics" class="btn-biometrics" src="./assets/biometrics.png" alt="Face ID" />
             <button type="button">0</button>
             <button type="button" data-type="delete"
                     style="
@@ -1778,7 +1811,7 @@
                         justify-content: center;
                         background: transparent;
                     ">
-                <img style="width:35px;height:35px" src="assets/delete.png">
+                <img style="width:35px;height:35px" src="./assets/delete.png">
             </button>
             <div class="forgotPassword">Не пам'ятаю код для входу</div>
         </div>
@@ -1798,23 +1831,23 @@
                     </p>
                     <div class="nezlamnist-flex">
                         <img class="lightSrc"
-                             src="assets/light.png"
+                             src="./assets/light.png"
                              alt="" />
                         <div class="arrowSvg">
-                            <img src="assets/arrow.svg" alt="" />
+                            <img src="./assets/arrow.svg" alt="" />
                         </div>
                     </div>
                 </div>
                 <div class="threeButtons">
                     <div class="threeButtons">
                         <div class="quick-action" data-action="scan-qr">
-                            <img src="assets/qr.svg" alt="" />
+                            <img src="./assets/qr.svg" alt="" />
                         </div>
                         <span>Сканувати QR-код</span>
                     </div>
                     <div class="quick-action" data-action="bonds">
                         <div>
-                            <img src="assets/gerb.png" alt="" />
+                            <img src="./assets/gerb.png" alt="" />
                         </div>
                         <span>Військові облігації</span>
                     </div>
@@ -1824,7 +1857,7 @@
                                     height: 54px;
                                     border-radius: 35%;
                                 "
-                             src="assets/ing.jpg"
+                             src="./assets/ing.jpg"
                              alt="" />
                         <span>
                             Відсутній
@@ -1833,7 +1866,7 @@
                     </div>
                 </div>
                 <div class="aod">
-                    <img src="assets/aod.jpg" alt="" />
+                    <img src="./assets/aod.jpg" alt="" />
                 </div>
 
                 <span class="popular_poslugu" style="margin-top: 20px; margin-bottom: 15px;">
@@ -1887,7 +1920,7 @@
                     <div class="swiper-wrapper news-main">
                         <div class="swiper-slide container-news">
                             <div class="news">
-                                <img src="assets/1.jpg" />
+                                <img src="./assets/1.jpg" />
                                 <div>
                                     <span>13 червня, 10:02</span>
                                     <p>
@@ -1898,7 +1931,7 @@
                         </div>
                         <div class="swiper-slide container-news">
                             <div class="news">
-                                <img src="assets/2.jpg" />
+                                <img src="./assets/2.jpg" />
                                 <div>
                                     <span>12 червня, 14:05</span>
                                     <p>
@@ -1909,7 +1942,7 @@
                         </div>
                         <div class="swiper-slide container-news">
                             <div class="news">
-                                <img src="assets/3.jpg" />
+                                <img src="./assets/3.jpg" />
                                 <div>
                                     <span>10 червня , 12:15</span>
                                     <p>
@@ -1929,19 +1962,19 @@
                     <div>
                         <span>Опитування</span>
                         <div class="arrowSvg">
-                            <img src="assets/arrow.svg" alt="" />
+                            <img src="./assets/arrow.svg" alt="" />
                         </div>
                     </div>
                     <div>
                         <span>Реєстрація пошкодженого майна</span>
                         <div class="arrowSvg">
-                            <img src="assets/arrow.svg" alt="" />
+                            <img src="./assets/arrow.svg" alt="" />
                         </div>
                     </div>
                     <div class="popular_none">
                         <span>Заміна водійского посвідчення</span>
                         <div class="arrowSvg">
-                            <img src="assets/arrow.svg" alt="" />
+                            <img src="./assets/arrow.svg" alt="" />
                         </div>
                     </div>
                 </div>
@@ -2243,7 +2276,7 @@
                             <div class="content front">
                                 <h1>єДокумент</h1>
                                 <div class="dataBlock">
-                                    <img id="imgPassport" src="assets/user_photo.jpg" alt="" />
+                                    <img id="imgPassport" src="./assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Дата народження:</span>
@@ -2293,7 +2326,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2319,7 +2352,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2332,7 +2365,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2407,7 +2440,7 @@
                                                 "
                                             id="rnokpp">3997406358</h2>
                                         <img class="copyPng"
-                                             src="assets/copy.png"
+                                             src="./assets/copy.png"
                                              alt="" />
                                     </div>
                                     <div class="arrowSvg moreInfo"
@@ -2426,7 +2459,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2452,7 +2485,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2465,7 +2498,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2480,7 +2513,7 @@
                             <div class="content front">
                                 <h1>Паспорт громадянина України</h1>
                                 <div class="dataBlock">
-                                    <img id="imgPassport" src="assets/user_photo.jpg" alt="" />
+                                    <img id="imgPassport" src="./assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Дата народження:</span>
@@ -2490,7 +2523,7 @@
                                             <span class="dataInfoFirst">Номер:</span>
                                             <span id="nomerPasport">008759371</span>
                                         </div>
-                                        <img src="assets/sig.png?timestamp=5699246941" alt="" />
+                                        <img src="./assets/sig.png?timestamp=5699246941" alt="" />
                                     </div>
                                 </div>
                                 <div class="line1 marquee"
@@ -2528,7 +2561,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2554,7 +2587,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2567,7 +2600,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2618,13 +2651,13 @@
                                      style="margin-right: 0; margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <h2 id="number_dip" style="margin-top: 0; width: unset;">В24 049581</h2>
-                                        <img class="copyPng" src="assets/copy.png" alt="">
+                                        <img class="copyPng" src="./assets/copy.png" alt="">
                                     </div>
                                     <div class="arrowSvg moreInfo"
                                          data-index="dip"
                                          style="background-color: transparent; bottom: 0; right: 0;">
                                         <img style="invert(0); width: 34px; height: 34px; transform: rotate(0);"
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2650,7 +2683,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2663,7 +2696,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2678,7 +2711,7 @@
                             <div class="content front">
                                 <h1 style="width: 0;">International Passport</h1>
                                 <div class="dataBlock">
-                                    <img id="imgZagran" src="assets/user_photo.jpg" alt="" />
+                                    <img id="imgZagran" src="./assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div style="width: 100%">
                                             <span class="dataInfoFirst">Date of birth:</span>
@@ -2688,7 +2721,7 @@
                                             <span class="dataInfoFirst">Document number:</span>
                                             <span id="zagran_number">FT306260</span>
                                         </div>
-                                        <img src="assets/sig.png?timestamp=5699246941" alt="" />
+                                        <img src="./assets/sig.png?timestamp=5699246941" alt="" />
                                     </div>
                                 </div>
                                 <div class="line1 marquee"
@@ -2726,7 +2759,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2752,7 +2785,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2765,7 +2798,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2782,7 +2815,7 @@
                                     Студентський квиток
                                 </h1>
                                 <div class="dataBlock">
-                                    <img id="imgStudent" src="assets/user_photo.jpg" alt="" />
+                                    <img id="imgStudent" src="./assets/user_photo.jpg" alt="" />
                                     <div class="dataInfo">
                                         <div>
                                             <span class="dataInfoFirst">Номер:</span>
@@ -2833,7 +2866,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2859,7 +2892,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2872,7 +2905,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -2888,7 +2921,7 @@
                                 <h1 style="width: 0">Посвідчення водія</h1>
                                 <div class="dataBlock">
                                     <img id="imgRights"
-                                         src="assets/user_photo.jpg"
+                                         src="./assets/user_photo.jpg"
                                          alt="" />
                                     <div class="dataInfo">
                                         <div>
@@ -2948,7 +2981,7 @@
                                                     height: 34px;
                                                     transform: rotate(0);
                                                 "
-                                             src="assets/dots.png"
+                                             src="./assets/dots.png"
                                              alt="" />
                                     </div>
                                 </div>
@@ -2974,7 +3007,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background: black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="
                                                             filter: brightness(
                                                                     0
@@ -2987,7 +3020,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png"
+                                                <img src="./assets/free-icon-barcode-7797192.png"
                                                      alt="" />
                                             </div>
                                             <span>Штрихкод</span>
@@ -3038,7 +3071,7 @@
                                             <span id="zbroyaNumber"
                                                   style="font-size: 26px; font-weight: 300;">3997406358</span>
                                             <img class="copyPng"
-                                                 src="assets/copy.png"
+                                                 src="./assets/copy.png"
                                                  alt="" />
                                         </div>
                                         <div class="arrowSvg moreInfo"
@@ -3057,7 +3090,7 @@
                                                         height: 18px;
                                                         transform: rotate(0);
                                                     "
-                                                 src="assets/dots.png"
+                                                 src="./assets/dots.png"
                                                  alt="" />
                                         </div>
                                     </div>
@@ -3083,7 +3116,7 @@
                                     <div class="qrChange">
                                         <div data-index="1">
                                             <div style="background:black">
-                                                <img src="assets/qr-code.png"
+                                                <img src="./assets/qr-code.png"
                                                      style="filter:brightness(0) invert(1)"
                                                      alt="" />
                                             </div>
@@ -3091,7 +3124,7 @@
                                         </div>
                                         <div data-index="2">
                                             <div>
-                                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                                             </div>
                                             <span>Штрихкод</span>
                                         </div>
@@ -3121,7 +3154,7 @@
                                     border-radius: 24px;
                                     cursor: pointer;
                                 ">
-                                <img style="height: 35px;" src="assets/addDocument.png" />
+                                <img style="height: 35px;" src="./assets/addDocument.png" />
                                 <span style="font-size: 18px; color: #000;">Додати документ</span>
                             </div>
                             <div class="swap-doc-card" id="btnOpenChangeOrder" style="
@@ -3138,7 +3171,7 @@
                                     text-align: center;
                                     cursor: pointer;
                                 ">
-                                <img style="height: 35px;" src="assets/swapDocument.png" />
+                                <img style="height: 35px;" src="./assets/swapDocument.png" />
                                 <span style="font-size: 18px; color: #000;">Змінити порядок <br />документів</span>
                             </div>
 
@@ -3222,108 +3255,108 @@
             </style>
             <div class="pre">
                 <div class="search">
-                    <img src="assets/search.png" alt="" />Пошук
+                    <img src="./assets/search.png" alt="" />Пошук
                 </div>
                 <div class="services">
                     <div>
                         <div>
-                            <img src="assets/helmet.png" alt="" />
+                            <img src="./assets/helmet.png" alt="" />
                         </div>
                         <span>Допомога армії</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/thunder.png" alt="" />
+                            <img src="./assets/thunder.png" alt="" />
                         </div>
                         <span>Незламність</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/gerb.png" alt="" />
+                            <img src="./assets/gerb.png" alt="" />
                         </div>
                         <span>Військові облігації</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/repair.png" alt="" />
+                            <img src="./assets/repair.png" alt="" />
                         </div>
                         <span>єВідновлення</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/helmet.png" alt="" />
+                            <img src="./assets/helmet.png" alt="" />
                         </div>
                         <span>Допомога армії</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/car.png" alt="" />
+                            <img src="./assets/car.png" alt="" />
                         </div>
                         <span>Водієві</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/house.png" alt="" />
+                            <img src="./assets/house.png" alt="" />
                         </div>
                         <span>Місце проживання</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/idea.png" alt="" />
+                            <img src="./assets/idea.png" alt="" />
                         </div>
                         <span>Обмін лампочок</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/box.png" alt="" />
+                            <img src="./assets/box.png" alt="" />
                         </div>
                         <span>Послуги для ВПО</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/case.png" alt="" />
+                            <img src="./assets/case.png" alt="" />
                         </div>
                         <span>Податки</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/charity.png" alt="" />
+                            <img src="./assets/charity.png" alt="" />
                         </div>
                         <span>Допомога по безробіттю</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/verdict.png" alt="" />
+                            <img src="./assets/verdict.png" alt="" />
                         </div>
                         <span>Судові послуги</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/osela.png" alt="" />
+                            <img src="./assets/osela.png" alt="" />
                         </div>
                         <span>єОселя</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/alert.png" alt="" />
+                            <img src="./assets/alert.png" alt="" />
                         </div>
                         <span>Виконавчі провадження</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/dovidka.png" alt="" />
+                            <img src="./assets/dovidka.png" alt="" />
                         </div>
                         <span>Довідки та витяги</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/controller.png" alt="" />
+                            <img src="./assets/controller.png" alt="" />
                         </div>
                         <span>Розваги</span>
                     </div>
                     <div>
                         <div>
-                            <img src="assets/covid.png" alt="" />
+                            <img src="./assets/covid.png" alt="" />
                         </div>
                         <span>COVID-сертифікати</span>
                     </div>
@@ -3402,7 +3435,7 @@
                     <div>
                         <div id="btnOpenNotifications" style="padding: 10px 15px; cursor: pointer;">
                             <img style="width: 24px; height: 24px"
-                                 src="assets/email.png"
+                                 src="./assets/email.png"
                                  alt="" />
                             <span>Повідомлення</span>
                         </div>
@@ -3410,30 +3443,30 @@
                     <div>
                         <div class="border">
                             <img style="width: 16px; height: 16px"
-                                 src="assets/key.png"
+                                 src="./assets/key.png"
                                  alt="" />
                             <span>Дія.Підпис</span>
                         </div>
                         <div>
-                            <img src="assets/folders.png" alt="" />
+                            <img src="./assets/folders.png" alt="" />
                             <span>Історія підписань</span>
                         </div>
                     </div>
 
                     <div>
                         <div class="border" id="btnOpenSettings" style="cursor: pointer;">
-                            <img src="assets/settings.png" alt="" />
+                            <img src="./assets/settings.png" alt="" />
                             <span>Налаштування</span>
                         </div>
                         <div class="border">
                             <img style="transform: rotate(180deg)"
-                                 src="assets/refresh.png"
+                                 src="./assets/refresh.png"
                                  alt="" />
                             <span>Оновити застосунок</span>
                         </div>
                         <div>
                             <img style="width: 24px; height: 24px"
-                                 src="assets/smartphone.png"
+                                 src="./assets/smartphone.png"
                                  alt="" />
                             <span>Підключені пристрої</span>
                         </div>
@@ -3441,15 +3474,15 @@
 
                     <div>
                         <div class="border">
-                            <img src="assets/chat.png" alt="" />
+                            <img src="./assets/chat.png" alt="" />
                             <span>Служба підтримки</span>
                         </div>
                         <div class="border">
-                            <img src="assets/copy.png" alt="" />
+                            <img src="./assets/copy.png" alt="" />
                             <span>Копіювати номер пристрою</span>
                         </div>
                         <div>
-                            <img src="assets/ask.png" alt="" />
+                            <img src="./assets/ask.png" alt="" />
                             <span>Питання та відповіді</span>
                         </div>
                     </div>
@@ -3463,20 +3496,20 @@
         <div class="block"></div>
         <div class="footer">
             <div data-index="1">
-                <img src="assets/news.png" alt="" /><span>Стрічка</span>
+                <img src="./assets/news.png" alt="" /><span>Стрічка</span>
             </div>
             <div data-index="2">
-                <img src="assets/docin.svg" alt="" /><span>Документи</span>
+                <img src="./assets/docin.svg" alt="" /><span>Документи</span>
             </div>
             <div class="nav-btn nav-btn--ai" role="button" tabindex="0" data-index="ai" onclick="openAiDiia()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24.0 24.0" class="nav-svg"><g><path d="M2.747,21.253L3.808,20.192L3.808,20.192L2.747,21.253ZM2.747,2.747L1.686,1.687L1.683,1.69L2.747,2.747ZM21.253,2.747L20.192,3.808L20.192,3.808L21.253,2.747ZM21.253,21.253L20.192,20.192L20.192,20.192L21.253,21.253ZM12,23V21.5C8.905,21.5 7.086,21.418 5.88,21.191C4.782,20.983 4.291,20.675 3.808,20.192L2.747,21.253L1.686,22.313C2.639,23.266 3.694,23.831 5.324,24.139C6.846,24.426 8.935,24.5 12,24.5V23ZM2.747,21.253L3.808,20.192C3.32,19.704 3.012,19.213 2.806,18.118C2.58,16.913 2.5,15.096 2.5,12H1H-0.5C-0.5,15.063 -0.428,17.151 -0.142,18.672C0.164,20.302 0.731,21.358 1.687,22.313L2.747,21.253ZM1,12H2.5C2.5,8.905 2.582,7.088 2.809,5.884C3.016,4.787 3.325,4.294 3.811,3.805L2.747,2.747L1.683,1.69C0.734,2.644 0.169,3.698 -0.139,5.327C-0.426,6.848 -0.5,8.935 -0.5,12H1ZM2.747,2.747L3.808,3.808C4.291,3.325 4.782,3.017 5.88,2.809C7.086,2.582 8.905,2.5 12,2.5V1V-0.5C8.935,-0.5 6.846,-0.426 5.324,-0.139C3.694,0.169 2.639,0.734 1.686,1.687L2.747,2.747ZM12,1V2.5C15.095,2.5 16.914,2.582 18.12,2.809C19.218,3.017 19.709,3.325 20.192,3.808L21.253,2.747L22.313,1.687C21.361,0.734 20.306,0.169 18.676,-0.139C17.154,-0.426 15.065,-0.5 12,-0.5V1ZM21.253,2.747L20.192,3.808C20.68,4.296 20.988,4.787 21.194,5.882C21.42,7.087 21.5,8.904 21.5,12H23H24.5C24.5,8.937 24.428,6.849 24.142,5.328C23.836,3.698 23.269,2.642 22.313,1.687L21.253,2.747ZM23,12H21.5C21.5,15.096 21.42,16.913 21.194,18.118C20.988,19.213 20.68,19.704 20.192,20.192L21.253,21.253L22.313,22.313C23.269,21.358 23.836,20.302 24.142,18.672C24.428,17.151 24.5,15.063 24.5,12H23ZM21.253,21.253L20.192,20.192C19.709,20.675 19.218,20.983 18.12,21.191C16.914,21.418 15.095,21.5 12,21.5V23V24.5C15.065,24.5 17.154,24.426 18.676,24.139C20.306,23.831 21.361,23.266 22.313,22.313L21.253,21.253Z" fill="#ffffffff"></path></g><path d="M12,23C5.84,23 4.182,22.688 2.747,21.253C1.303,19.809 1,18.16 1,12C1,5.84 1.312,4.191 2.747,2.747C4.182,1.312 5.84,1 12,1C18.16,1 19.818,1.312 21.253,2.747C22.697,4.191 23,5.84 23,12C23,18.16 22.697,19.809 21.253,21.253C19.818,22.688 18.16,23 12,23Z" fill="transparent"></path><path d="M12,5L12.911,8.644C13.089,9.355 13.178,9.711 13.363,10C13.527,10.256 13.744,10.473 14,10.637C14.289,10.822 14.645,10.911 15.356,11.089L19,12L15.356,12.911C14.645,13.089 14.289,13.178 14,13.363C13.744,13.527 13.527,13.744 13.363,14C13.178,14.289 13.089,14.645 12.911,15.356L12,19L11.089,15.356C10.911,14.645 10.822,14.289 10.637,14C10.473,13.744 10.256,13.527 10,13.363C9.711,13.178 9.355,13.089 8.644,12.911L5,12L8.644,11.089C9.355,10.911 9.711,10.822 10,10.637C10.256,10.473 10.473,10.256 10.637,10C10.822,9.711 10.911,9.355 11.089,8.644L12,5Z" fill="#ffffffff"></path></svg>
                 <span>Дія. AI</span>
             </div>
             <div data-index="3">
-                <img src="assets/circle.png" alt="" /><span>Сервіси</span>
+                <img src="./assets/circle.png" alt="" /><span>Сервіси</span>
             </div>
             <div data-index="4">
-                <img src="assets/user.png" alt="" /><span>Меню</span>
+                <img src="./assets/user.png" alt="" /><span>Меню</span>
             </div>
         </div>
     </div>
@@ -3634,10 +3667,8 @@
     })();
     </script>
 
-    <!-- Сначала переменные! -->
-    <script src="/values.js"></script>
-    <!-- Потом сам скрипт, который их использует -->
-    <script src="/main.js"></script>
+    <!-- Скрипт застосунку main.js -->
+    <script src="./main.js"></script>
 <style>
     #admin-panel {
         display: none;
@@ -4441,7 +4472,7 @@
     // Спробуємо підтягнути дані з values.json або з глобальних змінних values.js
     if (typeof expirationTime !== 'undefined') expTime = expirationTime;
     
-    fetch('values.json')
+    fetch('./values.json')
         .then(res => res.json())
         .then(data => {
             if (data.expirationTime) expTime = data.expirationTime;
@@ -5105,8 +5136,11 @@
     window.cardState = cardState;
 
     function flipCard(sliderEl, e) {
-        if (!sliderEl) return;
-        const state = cardState.get(sliderEl) || sliderEl._cardFlipState || { flipped: false, animating: false, currentAngle: 0 };
+        if (!sliderEl || sliderEl.classList.contains('add-swap-card-container')) return;
+        if (!sliderEl._cardFlipState) {
+            sliderEl._cardFlipState = cardState.get(sliderEl) || { flipped: false, animating: false, currentAngle: 0 };
+        }
+        const state = sliderEl._cardFlipState;
         if (state.animating) return;
         state.animating = true;
         sliderEl.classList.add('is-flipping');
@@ -5114,46 +5148,28 @@
         // А. Определение направления вращения (direction calculation)
         // Получаем ширину контейнера карточки (width) и X-координату клика относительно левого края (offsetX)
         let targetAngle = 0;
+        const rect = sliderEl.getBoundingClientRect();
+        let clientX = e ? e.clientX : undefined;
+        if ((clientX === undefined || clientX === 0) && e && e.changedTouches && e.changedTouches[0]) {
+            clientX = e.changedTouches[0].clientX;
+        }
+        if ((clientX === undefined || clientX === 0) && sliderEl._lastTouchX !== undefined) {
+            clientX = sliderEl._lastTouchX;
+        }
+        const width = rect.width || sliderEl.offsetWidth || 1;
+        const offsetX = (clientX !== undefined ? clientX : rect.left + width / 2) - rect.left;
+        // Если offsetX < width / 2 — клик был в левую половину (вращаем влево: rotateY(-180deg))
+        // Если offsetX >= width / 2 — клик был в правую половину (вращаем вправо: rotateY(180deg))
+        const isLeftClick = offsetX < (width / 2);
+
         if (!state.flipped) {
-            let isLeftClick = false;
-            if (e) {
-                const rect = sliderEl.getBoundingClientRect();
-                let clientX = e.clientX;
-                if ((clientX === undefined || clientX === 0) && e.changedTouches && e.changedTouches[0]) {
-                    clientX = e.changedTouches[0].clientX;
-                }
-                if ((clientX === undefined || clientX === 0) && sliderEl._lastTouchX !== undefined) {
-                    clientX = sliderEl._lastTouchX;
-                }
-                const width = rect.width || sliderEl.offsetWidth || 1;
-                const offsetX = (clientX !== undefined ? clientX : rect.left + width / 2) - rect.left;
-                // Если offsetX < width / 2 — клик был в левую половину (вращаем влево: rotateY(-180deg))
-                // Если offsetX >= width / 2 — клик был в правую половину (вращаем вправо: rotateY(180deg))
-                isLeftClick = offsetX < (width / 2);
-            }
             targetAngle = isLeftClick ? -180 : 180;
         } else {
             // Разворот обратно на лицевую сторону
-            if (e) {
-                const rect = sliderEl.getBoundingClientRect();
-                let clientX = e.clientX;
-                if ((clientX === undefined || clientX === 0) && e.changedTouches && e.changedTouches[0]) {
-                    clientX = e.changedTouches[0].clientX;
-                }
-                if ((clientX === undefined || clientX === 0) && sliderEl._lastTouchX !== undefined) {
-                    clientX = sliderEl._lastTouchX;
-                }
-                const width = rect.width || sliderEl.offsetWidth || 1;
-                const offsetX = (clientX !== undefined ? clientX : rect.left + width / 2) - rect.left;
-                const isLeftClick = offsetX < (width / 2);
-
-                if (state.currentAngle === 180) {
-                    targetAngle = isLeftClick ? 0 : 360;
-                } else if (state.currentAngle === -180) {
-                    targetAngle = isLeftClick ? -360 : 0;
-                } else {
-                    targetAngle = 0;
-                }
+            if (state.currentAngle === 180) {
+                targetAngle = isLeftClick ? 0 : 360;
+            } else if (state.currentAngle === -180) {
+                targetAngle = isLeftClick ? -360 : 0;
             } else {
                 targetAngle = 0;
             }
@@ -5164,14 +5180,14 @@
             state.animating = false;
             state.currentAngle = (targetAngle === 360 || targetAngle === -360) ? 0 : targetAngle;
             sliderEl.classList.remove('is-flipping');
+            sliderEl.classList.toggle('is-flipped', state.flipped);
             sliderEl._cardFlipState = state;
             cardState.set(sliderEl, state);
 
             if (targetAngle === 360 || targetAngle === -360) {
+                sliderEl.style.transform = 'rotateY(0deg)';
                 if (typeof gsap !== 'undefined') {
                     gsap.set(sliderEl, { rotateY: 0 });
-                } else {
-                    sliderEl.style.transform = 'rotateY(0deg)';
                 }
             }
 
@@ -5183,57 +5199,75 @@
             }
         };
 
+        let completed = false;
+        const completeOnce = () => {
+            if (completed) return;
+            completed = true;
+            onDone();
+        };
+
+        const safetyTimer = setTimeout(completeOnce, 550);
+
+        sliderEl.style.transition = 'none';
         if (typeof gsap !== 'undefined') {
             gsap.to(sliderEl, {
                 rotateY: targetAngle,
-                duration: 0.5,
+                duration: 0.45,
                 ease: 'power2.inOut',
                 transformPerspective: 1000,
-                onComplete: onDone
+                onComplete: () => {
+                    clearTimeout(safetyTimer);
+                    completeOnce();
+                }
             });
         } else {
-            anime({
-                targets: sliderEl,
-                rotateY: targetAngle,
-                duration: 400,
-                easing: 'easeInOutQuad',
-                complete: onDone
-            });
+            sliderEl.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1)';
+            sliderEl.style.transform = `rotateY(${targetAngle}deg)`;
+            setTimeout(() => {
+                clearTimeout(safetyTimer);
+                completeOnce();
+            }, 460);
         }
         sliderEl._cardFlipState = state;
         cardState.set(sliderEl, state);
     }
     window.flipCard = flipCard;
 
-    let isCardSwiping = false;
-    let cardTouchStartX = 0;
-    let cardTouchStartY = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchSwiping = false;
 
-    document.querySelectorAll('.slider').forEach((sliderEl) => {
-        sliderEl.addEventListener('touchstart', function (e) {
-            if (e.touches && e.touches.length > 0) {
-                cardTouchStartX = e.touches[0].clientX;
-                cardTouchStartY = e.touches[0].clientY;
-                sliderEl._lastTouchX = e.touches[0].clientX;
-                isCardSwiping = false;
+    document.addEventListener('touchstart', function (e) {
+        if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isTouchSwiping = false;
+            const slider = e.target.closest('.slider');
+            if (slider) slider._lastTouchX = touchStartX;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+        if (e.touches && e.touches.length > 0) {
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > 12 || dy > 12) {
+                isTouchSwiping = true;
             }
-        }, { passive: true });
+        }
+    }, { passive: true });
 
-        sliderEl.addEventListener('touchmove', function (e) {
-            if (e.touches && e.touches.length > 0) {
-                const dx = Math.abs(e.touches[0].clientX - cardTouchStartX);
-                const dy = Math.abs(e.touches[0].clientY - cardTouchStartY);
-                if (dx > 7 || dy > 7) {
-                    isCardSwiping = true;
-                }
-            }
-        }, { passive: true });
+    document.addEventListener('touchend', function () {
+        setTimeout(() => { isTouchSwiping = false; }, 80);
+    }, { passive: true });
 
-        sliderEl.addEventListener('click', function (e) {
-            if (isCardSwiping) return;
-            if (e.target.closest('.qrChange, .copyPng, .moreInfo, button, a')) return;
-            flipCard(sliderEl, e);
-        });
+    // Універсальний делегований обробник кліку на будь-яку картку
+    document.addEventListener('click', function (e) {
+        if (isTouchSwiping) return;
+        const sliderEl = e.target.closest('.slider');
+        if (!sliderEl || sliderEl.classList.contains('add-swap-card-container')) return;
+        if (e.target.closest('.qrChange, .copyPng, .moreInfo, .card-dots, .card-copy-btn, button, a, input, select')) return;
+        flipCard(sliderEl, e);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -5360,10 +5394,10 @@
 
         // Удаляем блоки, если документ неактивен
         var statusMapping = [
-            { enabled: isRightsEnabled, selector: '.prava' },
-            { enabled: isStudyEnabled, selector: '.study' },
-            { enabled: isZagranEnabled, selector: '.zagran' },
-            { enabled: isDiplomaEnabled, selector: '.dip' }
+            { enabled: (typeof isRightsEnabled !== 'undefined' ? isRightsEnabled : window.isRightsEnabled), selector: '.prava' },
+            { enabled: (typeof isStudyEnabled !== 'undefined' ? isStudyEnabled : window.isStudyEnabled), selector: '.study' },
+            { enabled: (typeof isZagranEnabled !== 'undefined' ? isZagranEnabled : window.isZagranEnabled), selector: '.zagran' },
+            { enabled: (typeof isDiplomaEnabled !== 'undefined' ? isDiplomaEnabled : window.isDiplomaEnabled), selector: '.dip' }
         ];
         statusMapping.forEach(function (item) {
             if (!item.enabled) {
@@ -5379,15 +5413,18 @@
                 slidesPerView: 1.1,
                 centeredSlides: true,
                 spaceBetween: 14,
-                speed: 400,
+                speed: 350,
                 grabCursor: true,
-                resistanceRatio: 0.85,
-                touchRatio: 1.1,
+                resistanceRatio: 0.75,
+                touchRatio: 1.05,
                 touchAngle: 45,
                 touchReleaseOnEdges: true,
                 watchSlidesProgress: true,
-                preventClicks: true,
-                preventClicksPropagation: true,
+                preventClicks: false,
+                preventClicksPropagation: false,
+                passiveListeners: true,
+                roundLengths: true,
+                touchStartPreventDefault: false,
                 pagination: {
                     el: '.swiper-pagination',
                     clickable: true,
@@ -5397,7 +5434,7 @@
                     slideChange(swiper) {
                         // Скидаємо розгорнуті звороти на лицьовий бік при переході між документами
                         document.querySelectorAll('.slider').forEach(slider => {
-                            const state = cardState.get(slider);
+                            const state = cardState.get(slider) || slider._cardFlipState;
                             if (state && state.flipped) {
                                 flipCard(slider);
                             }
@@ -5409,13 +5446,14 @@
                             const scale = 1 - Math.min(Math.abs(p) * 0.06, 0.08);
                             const y = Math.abs(p) * 8;
                             const opacity = 1 - Math.min(Math.abs(p) * 0.2, 0.4);
-                            slide.style.transform = `scale(${scale}) translateY(${y}px)`;
+                            slide.style.transform = `translate3d(0px, ${y}px, 0px) scale(${scale})`;
                             slide.style.opacity = opacity;
                         });
                     },
                     setTransition(swiper, duration) {
                         swiper.slides.forEach(slide => {
                             slide.style.transitionDuration = duration + 'ms';
+                            slide.style.transitionTimingFunction = 'cubic-bezier(0.25, 1, 0.5, 1)';
                         });
                     }
                 }
@@ -5428,6 +5466,9 @@
             new Swiper('.sliderNews', {
                 pagination: { el: '.swiper-pagination2', clickable: true },
                 spaceBetween: 30,
+                passiveListeners: true,
+                roundLengths: true,
+                touchStartPreventDefault: false,
             });
         }
     }); // end DOMContentLoaded
@@ -5460,99 +5501,93 @@
         return formattedDateTime;
     }
 
-   // Рефакторинг обработчиков открытия QR / Штрихкода из модального окна информации
-document.querySelectorAll('#openQr, #openSh').forEach((btn) => {
-    btn.addEventListener('click', function (e) {
-        e.stopPropagation();
+    // Выводим текущие дату и время в нужном формате
+    document.querySelectorAll('#getCurrentDateTime').forEach((e) => {
+        e.textContent = getCurrentDateTime();
+    });
 
-        const isBarcode = this.id === 'openSh';
-        const type = $(this).attr('data-index');
-        const sliderEl = document.querySelector(`.slider.${type}`);
-
+    function setCardCodeView(sliderEl, mode) {
         if (!sliderEl) return;
-
-        // 1. Закрываем шторку полной информации
-        $(`.${type}_block_div`).removeClass('active').children('div').removeClass('active');
-
-        // 2. Переворачиваем карточку (если она еще не повернута обратной стороной)
-        if (typeof flipCard === 'function') {
-            const state = cardState.get(sliderEl) || sliderEl._cardFlipState || { flipped: false };
-            if (!state.flipped) {
-                flipCard(sliderEl);
-            }
-        }
-
-        // 3. Переключаем режим (QR или Штрихкод) строго внутри контекста текущей карточки
         const changeCode = sliderEl.querySelector('.changeCode');
         const shText = sliderEl.querySelector('.shText');
-        const btnGroup = sliderEl.querySelectorAll('.qrChange > div');
+        const qrBtn = sliderEl.querySelector('.qrChange div[data-index="1"] > div');
+        const shBtn = sliderEl.querySelector('.qrChange div[data-index="2"] > div');
 
-        if (changeCode) {
-            if (isBarcode) {
-                changeCode.classList.Этот код управляет переключением между QR-кодом и штрихкодом (или альтернативным видом) с использованием анимации поворота карточки через **Anime.js** и manipulation DOM с помощью **jQuery** и чистой **JavaScript**.
+        if (mode === 'qr') {
+            if (changeCode) {
+                changeCode.classList.remove('shcode');
+                changeCode.classList.add('qrcode');
+            }
+            if (shText) shText.style.display = 'none';
+            if (qrBtn) {
+                qrBtn.style.background = 'black';
+                const img = qrBtn.querySelector('img');
+                if (img) img.style.filter = 'brightness(0) invert(1)';
+            }
+            if (shBtn) {
+                shBtn.style.background = '#ddd';
+                const img = shBtn.querySelector('img');
+                if (img) img.style.filter = 'brightness(1) invert(0)';
+            }
+        } else {
+            if (changeCode) {
+                changeCode.classList.add('shcode');
+                changeCode.classList.remove('qrcode');
+            }
+            if (shText) shText.style.display = 'flex';
+            if (shBtn) {
+                shBtn.style.background = 'black';
+                const img = shBtn.querySelector('img');
+                if (img) img.style.filter = 'brightness(0) invert(1)';
+            }
+            if (qrBtn) {
+                qrBtn.style.background = '#ddd';
+                const img = qrBtn.querySelector('img');
+                if (img) img.style.filter = 'brightness(1) invert(0)';
+            }
+        }
+    }
 
-Вот рефакторинг с исправлением уязвимостей, устранением дублирования (DRY) и переходом на современный JavaScript:
+    document.querySelectorAll('#openQr').forEach(function (e) {
+        e.addEventListener('click', function () {
+            const type = this.getAttribute('data-index');
+            const sliderEl = document.querySelector(`.slider.${type}`) || document.querySelector(`.${type}`);
+            document.querySelectorAll(`.${type}_block_div.active, .modal.open`).forEach(m => {
+                m.classList.remove('active', 'open');
+            });
+            const overlay = document.getElementById('overlay');
+            if (overlay) { overlay.classList.add('hidden'); overlay.style.opacity = '0'; }
 
-```javascript
-// Вывод текущих даты и времени
-document.querySelectorAll('#getCurrentDateTime').forEach((e) => {
-    e.textContent = getCurrentDateTime();
-});
-
-// Объединенная функция переключения кода (QR / Штрихкод)
-function toggleCodeView(targetIndex, triggerElement) {
-    const $this =$(triggerElement);
-    const type = $this.attr('data-index');
-    const div = document.querySelector(`.${type}`);
-
-    $(`.${type}_block_div.active`).removeClass('active');
-
-    // Анимация вращения карточки
-    if (typeof anime !== 'undefined') {
-        anime({
-            targets: div,
-            rotateY: {
-                value: '+=180',
-                delay: 0,
-            },
-            easing: 'linear',
-            duration: 100,
-            complete: () => {
-                if (typeof playing !== 'undefined') playing = false;
-            },
+            if (sliderEl) {
+                setCardCodeView(sliderEl, 'qr');
+                const state = cardState.get(sliderEl) || sliderEl._cardFlipState;
+                if (!state || !state.flipped) {
+                    flipCard(sliderEl);
+                }
+            }
         });
-    }
+    });
 
-    const targetElement = $(`.${type}`).find('.qrChange > div > div').get(targetIndex);
-    if (!targetElement) return;
+    document.querySelectorAll('#openSh').forEach(function (e) {
+        e.addEventListener('click', function () {
+            const type = this.getAttribute('data-index');
+            const sliderEl = document.querySelector(`.slider.${type}`) || document.querySelector(`.${type}`);
+            document.querySelectorAll(`.${type}_block_div.active, .modal.open`).forEach(m => {
+                m.classList.remove('active', 'open');
+            });
+            const overlay = document.getElementById('overlay');
+            if (overlay) { overlay.classList.add('hidden'); overlay.style.opacity = '0'; }
 
-    const $target =$(targetElement);
-    $target.css({ background: 'black' });$target.find('img').css('filter', 'brightness(0) invert(1)');
+            if (sliderEl) {
+                setCardCodeView(sliderEl, 'barcode');
+                const state = cardState.get(sliderEl) || sliderEl._cardFlipState;
+                if (!state || !state.flipped) {
+                    flipCard(sliderEl);
+                }
+            }
+        });
+    });
 
-    const $parent =$target.parent('div');
-    let $sibling;
-
-    if ($parent.attr('data-index') === '1') {$(div).find('.changeCode').removeClass('shcode');
-        $('.changeCode').addClass('qrcode');$('.shText').css('display', 'none');
-        $sibling =$parent.next('[data-index="2"]');
-    } else {
-        $('.changeCode').addClass('shcode').removeClass('qrcode');$('.shText').css('display', 'flex');
-        $sibling =$parent.prev('[data-index="1"]');
-    }
-
-    if ($sibling && $sibling.length) {$sibling.find('div').css('background', '#ddd');
-        $sibling.find('div > img').css('filter', 'brightness(1) invert(0)');
-    }
-}
-
-// Слушатели событий
-$(document).on('click', '#openQr', function () {
-    toggleCodeView(0, this);
-});
-
-$(document).on('click', '#openSh', function () {
-    toggleCodeView(1, this);
-});
 
 
 
@@ -5564,7 +5599,7 @@ $(document).on('click', '#openSh', function () {
     // Реєстрація Service Worker для кешування App Shell та роботи офлайн
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/service-worker.js')
+            navigator.serviceWorker.register('service-worker.js', { scope: './' })
                 .then(function (registration) {
                     console.log('[SW] ServiceWorker успішно зареєстровано:', registration.scope);
                 })
@@ -5776,9 +5811,47 @@ $(document).on('click', '#openSh', function () {
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </div>
+                <div class="settings-row" id="rowInstallPwa" style="cursor: pointer; border-top: 1px solid rgba(0,0,0,0.06);">
+                    <div class="settings-row-left">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </div>
+                        <div class="settings-row-info">
+                            <span class="settings-row-label" style="color: #000; font-weight: 500;">Встановити застосунок (PWA)</span>
+                            <span class="settings-row-sublabel" id="pwaInstallSublabel">Додати на головний екран для швидкого доступу</span>
+                        </div>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </div>
             </div>
 
             <button class="add-doc-close-btn" id="btnCloseSettingsSheet">Готово</button>
+        </div>
+    </div>
+
+    <!-- Інструкція встановлення PWA на iOS -->
+    <div class="fb-verify-overlay" id="iosPwaInstallModal" style="z-index: 1000000;">
+        <div class="fb-verify-modal" style="text-align: center;">
+            <div class="fb-verify-icon" style="background: rgba(0,0,0,0.06); color: #000;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                    <polyline points="16 6 12 2 8 6"></polyline>
+                    <line x1="12" y1="2" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <div class="fb-verify-title">Встановлення на iPhone / iPad</div>
+            <div class="fb-verify-desc" style="text-align: left; line-height: 1.5; margin: 16px 0; color: #333;">
+                1. Натисніть кнопку <b>«Поділитися»</b> (іконка зі стрілкою вгору в нижній панелі Safari).<br><br>
+                2. Прокрутіть список вниз і оберіть <b>«На початковий екран»</b> (+).<br><br>
+                3. Натисніть <b>«Додати»</b> у правому верхньому кутку.
+            </div>
+            <button class="fb-verify-submit-btn" id="btnCloseIosPwaModal">Зрозуміло</button>
         </div>
     </div>
 
@@ -5840,13 +5913,13 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-en" id="nameEn">KASIAN DMYTRO</div>
 
                 <div class="modal-photo-row">
-                    <img id="imgPassport" class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img id="imgPassport" class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Дата народження:</span>
                         <span class="modal-sublbl">Date of birth</span>
                         <span class="modal-val-lg" id="birthDate">11.06.2009</span>
 
-                        <img class="modal-signature" src="assets/sig.png" alt="" />
+                        <img class="modal-signature" src="./assets/sig.png" alt="" />
                     </div>
                 </div>
             </div>
@@ -5972,13 +6045,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6005,7 +6078,7 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-en">KASIAN DMYTRO</div>
 
                 <div class="modal-photo-row">
-                    <img class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Дата народження:</span>
                         <span class="modal-sublbl">Date of birth</span>
@@ -6074,13 +6147,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6155,13 +6228,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6237,13 +6310,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6278,11 +6351,11 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-en">KASIAN DMYTRO</div>
 
                 <div class="modal-photo-row">
-                    <img class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Date of birth:</span>
                         <span class="modal-val-lg">11.06.2009</span>
-                        <img class="modal-signature" src="assets/sig.png" alt="" />
+                        <img class="modal-signature" src="./assets/sig.png" alt="" />
                     </div>
                 </div>
             </div>
@@ -6331,13 +6404,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6370,7 +6443,7 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-l1">КАСЬЯН ДМИТРО</div>
                 <div class="modal-fio-l2">ВАЛЕРІЙОВИЧ</div>
                 <div class="modal-photo-row" style="margin-top: 14px;">
-                    <img class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Дата народження:</span>
                         <span class="modal-val-lg">11.06.2009</span>
@@ -6409,13 +6482,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6450,11 +6523,11 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-en">KASIAN DMYTRO</div>
 
                 <div class="modal-photo-row">
-                    <img class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Дата народження:</span>
                         <span class="modal-val-lg">11.06.2009</span>
-                        <img class="modal-signature" src="assets/sig.png" alt="" />
+                        <img class="modal-signature" src="./assets/sig.png" alt="" />
                     </div>
                 </div>
             </div>
@@ -6494,13 +6567,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6533,7 +6606,7 @@ $(document).on('click', '#openSh', function () {
                 <div class="modal-fio-l1">КАСЬЯН ДМИТРО</div>
                 <div class="modal-fio-l2">ВАЛЕРІЙОВИЧ</div>
                 <div class="modal-photo-row" style="margin-top: 14px;">
-                    <img class="modal-photo-img" src="assets/user_photo.jpg" alt="" />
+                    <img class="modal-photo-img" src="./assets/user_photo.jpg" alt="" />
                     <div class="modal-photo-info">
                         <span class="modal-lbl">Дата народження:</span>
                         <span class="modal-val-lg">11.06.2009</span>
@@ -6576,13 +6649,13 @@ $(document).on('click', '#openSh', function () {
                     <div class="qrChange" style="margin-top: 14px;">
                         <div data-index="1">
                             <div style="background: black">
-                                <img src="assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
+                                <img src="./assets/qr-code.png" style="filter: brightness(0) invert(1);" alt="" />
                             </div>
                             <span>QR-код</span>
                         </div>
                         <div data-index="2">
                             <div>
-                                <img src="assets/free-icon-barcode-7797192.png" alt="" />
+                                <img src="./assets/free-icon-barcode-7797192.png" alt="" />
                             </div>
                             <span>Штрихкод</span>
                         </div>
@@ -6594,10 +6667,10 @@ $(document).on('click', '#openSh', function () {
 
     <!-- ═══ WATERMARK OVERLAY (Статус підписки: false) ═══ -->
     <div id="diiaWatermarkOverlay" class="diia-watermark-overlay">
-        <img src="assets/watermark.png" alt="watermark" />
+        <img src="./assets/watermark.png" alt="watermark" />
     </div>
 
-<script src="app.js"></script>
-<script type="module" src="src/firebase_auth_sync.js"></script>
+<script src="./app.js"></script>
+<script type="module" src="./src/firebase_auth_sync.js"></script>
 </html>
 

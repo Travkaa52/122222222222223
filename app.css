@@ -107,7 +107,7 @@ html, body {
 }
 
 .diia-logo-black {
-    background-image: url('assets/diya.svg');
+    background-image: url('./assets/diya.svg');
     width: 50px;
     height: 50px;
     background-size: contain;
@@ -618,7 +618,7 @@ html, body {
 }
 
 .changeCode.qrcode {
-    background-image: url('assets/q.png');
+    background-image: url('./assets/q.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -627,7 +627,7 @@ html, body {
 }
 
 .changeCode.shcode {
-    background-image: url('assets/free-icon-barcode-7797192.png');
+    background-image: url('./assets/free-icon-barcode-7797192.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
