@@ -50,9 +50,3 @@ var defaultUserData = {
 };
 
 window.defaultUserData = defaultUserData;
-window.entryPin = entryPin;
-window.allowBiometricSkip = allowBiometricSkip;
-window.isRightsEnabled = isRightsEnabled;
-window.isStudyEnabled = isStudyEnabled;
-window.isZagranEnabled = isZagranEnabled;
-window.isDiplomaEnabled = isDiplomaEnabled;

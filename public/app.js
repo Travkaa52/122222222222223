@@ -1,30 +1,24 @@
 /**
- * ╔═════════════════════════════════════════════════════════════╗
- * ║   app.js — Дія PWA v2  (Оновлено під оригінальний дизайн)   ║
- * ║   • Автентична верстка карток (єДокумент, Податки тощо)     ║
- * ║   • Дані з БД (через DiyaDB) + localStorage як fallback     ║
- * ║   • Автооновлення при зміні через бота                      ║
- * ╚═════════════════════════════════════════════════════════════╝
+ * ╔══════════════════════════════════════════════════════╗
+ * ║  app.js — Дія PWA — повний реімплемент              ║
+ * ║  • Правильний 3D-flip (iOS spring, без глюків)      ║
+ * ║  • QR / Barcode toggle з таймером                   ║
+ * ║  • DiyaDB (GitHub Raw + API) + localStorage fallback║
+ * ║  • Оптимізовано під кожен пристрій                  ║
+ * ╚══════════════════════════════════════════════════════╝
  */
 
-// ═══════════════════════════════════════════════════════════════
-// 1. ДАНІ — злиття з БД → localStorage → defaultUserData
-// ═══════════════════════════════════════════════════════════════
-const LS_KEY = 'diyaLocalState_v2';
-let _localState = {};
-try {
-  _localState = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-  if (_localState.name && _localState.name.includes('КОЦЮБА')) {
-    delete _localState.name;
-    delete _localState.rnokpp;
-    delete _localState.birthDate;
-    delete _localState.textName;
-    delete _localState.nameEn;
-    localStorage.setItem(LS_KEY, JSON.stringify(_localState));
-  }
-} catch (e) {}
+'use strict';
 
-// Єдине джерело правди для поточної сесії
+/* ══════════════════════════════════════════════════════
+   0. CONSTANTS
+   ══════════════════════════════════════════════════════ */
+const LS_KEY  = 'diyaLocalState_v2';
+const PIN_KEY = 'diya_pin_override';
+
+let _localState = {};
+try { _localState = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch {}
+
 let APP_DATA = {};
 
 function mergeData(fromDB) {
@@ -36,559 +30,621 @@ function mergeData(fromDB) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 2. ЗАСТОСУВАННЯ ДАНИХ ДО DOM
-// ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
+   1. DOM DATA BINDING
+   ══════════════════════════════════════════════════════ */
 function applyDataToDOM(data) {
   data = data || APP_DATA;
 
-  // Текстові поля
   Object.keys(data).forEach(id => {
-    if (id.startsWith('doc_') || id === 'mainPhoto' || id === 'sigPhoto') return;
-    document.querySelectorAll('#' + id).forEach(el => {
-      if (data[id] !== undefined && data[id] !== '') el.textContent = data[id];
+    if (id === 'mainPhoto' || id === 'sigPhoto' || id.startsWith('doc_')) return;
+    document.querySelectorAll('#' + CSS.escape(id)).forEach(el => {
+      if (data[id] != null && data[id] !== '') el.textContent = data[id];
     });
   });
 
-  // Фото — card-photo + старі селектори
-  const photoUrl = data.mainPhoto || 'assets/user_photo.jpg';
-  document.querySelectorAll('.card-photo, #imgPassport, #imgStudent, #imgRights, #imgZagran').forEach(img => {
-    img.src = photoUrl;
-  });
+  const photo = data.mainPhoto || 'assets/user_photo.jpg';
+  document.querySelectorAll('.card-photo, #imgPassport, #imgStudent, #imgRights, #imgZagran')
+    .forEach(img => { if (photo) img.src = photo; });
 
-  // Підпис
   if (data.sigPhoto) {
-    document.querySelectorAll('img[src*="sig.png"]').forEach(img => img.src = data.sigPhoto);
+    document.querySelectorAll('img[src*="sig"]').forEach(img => img.src = data.sigPhoto);
   }
-
-  // Дата/час
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const dateFormatted = `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()}`;
-  const dateTimeFormatted = `${pad(now.getHours())}:${pad(now.getMinutes())} | ${dateFormatted}`;
-  document.querySelectorAll('#getCurrentDateTime').forEach(el => el.textContent = dateTimeFormatted);
-  document.querySelectorAll('.dataNow').forEach(el => el.textContent = dateFormatted);
-
-  // Оновлюємо картки
-  _refreshAllCards(data);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 3. БУДОВА / ОНОВЛЕННЯ КАРТОК
-// ═══════════════════════════════════════════════════════════════
-
-const CARD_CONFIGS = {
-  eDoc: {
-    label: 'єДокумент',
-    hasPhoto: true,
-    fields: [
-      { label: 'Дані народження', key: 'birthDate' },
-      { label: 'РНОКПП',         key: 'rnokpp' },
-    ],
-    marquee: '...за рік військового стану. Ой у лузі червона калина г...',
-    nameKey: 'name',
-    dotsIndex: 'eDoc',
-  },
-  podatki: {
-    label: 'Картка платника<br>податків',
-    chip: 'РНОКПП',
-    hasPhoto: false,
-    fields: [
-      { label: 'Дата народження', key: 'birthDate' },
-      { label: 'РНОКПП',         key: 'rnokpp' },
-    ],
-    verifyStrip: '15.09.2026 • Перевірено Державною податковою',
-    nameKey: 'name',
-    dotsIndex: 'podatki',
-  },
-  pasport: {
-    label: 'Паспорт громадянина<br>України',
-    hasPhoto: true,
-    fields: [
-      { label: 'Дата народження', key: 'birthDate' },
-      { label: 'Стать',           key: 'sex' },
-      { label: '№ паспорта',      key: 'nomerPasport' },
-      { label: 'Дійсний до',      key: 'dateOut' },
-    ],
-    nameKey: 'name',
-    dotsIndex: 'pasport',
-  },
-  zagran: {
-    label: 'Закордонний паспорт',
-    hasPhoto: true,
-    fields: [
-      { label: 'Дата народження', key: 'birthDate' },
-      { label: 'Стать',           key: 'sex' },
-      { label: '№ закордонного',  key: 'zagran_number' },
-      { label: 'Дійсний до',      key: 'dateOut' },
-    ],
-    nameKey: 'nameEn',
-    dotsIndex: 'zagran',
-  },
-  dip: {
-    label: 'Диплом бакалавра',
-    hasPhoto: true,
-    fields: [
-      { label: 'Спеціальність',   key: 'special_dip' },
-      { label: '№ диплома',       key: 'number_dip' },
-      { label: 'Дата видачі',     key: 'dayout_dip' },
-    ],
-    nameKey: 'name',
-    dotsIndex: 'dip',
-  },
-  study: {
-    label: 'Студентський квиток',
-    hasPhoto: true,
-    fields: [
-      { label: 'Форма навчання',  key: 'formaStudy' },
-      { label: '№ студентського', key: 'nomerStudy' },
-      { label: 'Дійсний до',      key: 'diusnuyDoStudy' },
-    ],
-    nameKey: 'name',
-    dotsIndex: 'study',
-  },
-  prava: {
-    label: 'Посвідчення водія',
-    hasPhoto: true,
-    fields: [
-      { label: 'Категорії',       key: 'rightsCategories' },
-      { label: '№ посвідчення',   key: 'pravaNnumber' },
-      { label: 'Дійсне до',       key: 'srokPrav' },
-    ],
-    nameKey: 'name',
-    dotsIndex: 'prava',
-  },
-  zbroya: {
-    label: 'Дозвіл на зброю',
-    hasPhoto: false,
-    fields: [
-      { label: 'Вид зброї',       key: 'zbroyaType' },
-      { label: '№ дозволу',       key: 'zbroyaNumber' },
-      { label: 'Дата видачі',     key: 'dateGivePrava' },
-    ],
-    nameKey: 'name',
-    dotsIndex: 'zbroya',
-  },
-};
-
-function _buildCardSkeletonHTML(cfg) {
-  const photoSk = cfg.hasPhoto ? `<div class="skeleton-box sk-photo"></div>` : '';
-  const fieldsSk = cfg.fields.map(() => `
-    <div class="skeleton-field">
-      <div class="skeleton-box sk-field-label"></div>
-      <div class="skeleton-box sk-field-value"></div>
-    </div>`).join('');
-  const marqueeSk = cfg.marquee ? `<div class="skeleton-box sk-marquee"></div>` : '';
-
-  return `
-    <div class="card-skeleton" id="skeleton-${cfg.dotsIndex}">
-      <div class="skeleton-header">
-        <div class="skeleton-box sk-label"></div>
-        <div class="skeleton-box sk-chip"></div>
-      </div>
-      <div class="skeleton-body">
-        ${photoSk}
-        <div class="skeleton-fields">${fieldsSk}</div>
-      </div>
-      ${marqueeSk}
-      <div class="skeleton-footer">
-        <div class="skeleton-box sk-name"></div>
-        <div class="skeleton-box sk-dots"></div>
-      </div>
-    </div>`;
-}
-
-// Допоміжна функція для рендерингу ПІБ у 3 рядки
-function _renderFio3Lines(nameStr, id) {
-  const parts = (nameStr || '').trim().split(/\s+/);
-  const l1 = parts[0] || 'КАСЬЯН';
-  const l2 = parts[1] || 'ДМИТРО';
-  const l3 = parts.slice(2).join(' ') || (parts.length > 2 ? parts[2] : 'ВАЛЕРІЙОВИЧ');
-  return `
-    <div class="card-fio-3lines" id="${id}">
-      <div>${l1}</div>
-      <div>${l2}</div>
-      <div>${l3}</div>
-    </div>`;
-}
-
-// Генерація фронту картки з урахуванням оригінального дизайну Дії
-function _buildCardFrontHTML(cfg, data) {
-  const skeleton = _buildCardSkeletonHTML(cfg);
-  const nameVal = data[cfg.nameKey] || '—';
-
-  // 1. Картка №1: «єДокумент» (Скріншот ...401.jpg)
-  if (cfg.dotsIndex === 'eDoc') {
-    const birthVal = data['birthDate'] || '11.06.2009';
-    const rnokppVal = data['rnokpp'] || '3997406358';
-    const photoUrl = data.mainPhoto || 'assets/user_photo.jpg';
-    return `
-      ${skeleton}
-      <div class="card-sync-badge" id="sync-${cfg.dotsIndex}" title="Синхронізовано"></div>
-      <div class="card-header">
-        <h1 class="card-title-bold">єДокумент</h1>
-      </div>
-      <div class="card-body">
-        <div class="card-photo-box">
-          <img class="card-photo" src="${photoUrl}" alt="Фото">
-        </div>
-        <div class="card-fields">
-          <div class="card-field">
-            <span class="card-field-label">Дані народження:</span>
-            <span id="birthDate" class="card-field-value">${birthVal}</span>
-          </div>
-          <div class="card-field">
-            <span class="card-field-label">РНОКПП:</span>
-            <span id="rnokpp" class="card-field-value">${rnokppVal}</span>
-          </div>
-        </div>
-      </div>
-      <div class="card-marquee-strip">
-        <div class="card-marquee-inner">
-          <span>...за рік військового стану. Ой у лузі червона калина г...&nbsp;&nbsp;&nbsp;...за рік військового стану. Ой у лузі червона калина г...</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        ${_renderFio3Lines(nameVal, 'name-eDoc')}
-        <div class="card-dots moreInfo" data-index="eDoc" title="Дії">
-          <div class="card-dot-circle"></div>
-          <div class="card-dot-circle"></div>
-          <div class="card-dot-circle"></div>
-        </div>
-      </div>`;
-  }
-
-  // 2. Картка №2: «Картка платника податків» (Скріншот ...400.jpg)
-  if (cfg.dotsIndex === 'podatki') {
-    const rnokppVal = data['rnokpp'] || '3997406358';
-    const birthVal = data['birthDate'] || '11.06.2009';
-    return `
-      ${skeleton}
-      <div class="card-sync-badge" id="sync-${cfg.dotsIndex}" title="Синхронізовано"></div>
-      <div class="card-header">
-        <div class="card-header-podatki">
-          <h1 class="card-title-two-lines">${cfg.label}</h1>
-          <div class="card-chip-sub">${cfg.chip}</div>
-        </div>
-      </div>
-      <div class="card-podatki-content">
-        <div class="card-podatki-fio" id="name-${cfg.dotsIndex}">${nameVal}</div>
-        <div class="card-podatki-birth">
-          <span class="card-field-label">Дата народження:</span>
-          <span id="birthDate" class="card-field-value">${birthVal}</span>
-        </div>
-      </div>
-      <div class="card-verify-strip">
-        <span class="card-verify-text">${cfg.verifyStrip || '15.09.2026 • Перевірено Державною податковою'}</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-rnokpp-group">
-          <span class="card-big-rnokpp" id="rnokpp">${rnokppVal}</span>
-          <button class="card-copy-btn copyPng" title="Скопіювати РНОКПП" data-copy="${rnokppVal}">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
-        </div>
-        <div class="card-dots moreInfo" data-index="${cfg.dotsIndex}" title="Дії">
-          <div class="card-dot-circle"></div>
-          <div class="card-dot-circle"></div>
-          <div class="card-dot-circle"></div>
-        </div>
-      </div>`;
-  }
-
-  // 3. Стандартний дизайн з фото для інших карток в оригінальному стилі Дії
-  const photo = cfg.hasPhoto
-    ? `<div class="card-photo-box"><img class="card-photo" src="${data.mainPhoto || 'assets/user_photo.jpg'}" alt="Фото"></div>`
-    : '';
-
-  const fields = cfg.fields.map(f => {
-    const val = data[f.key] || '—';
-    return `
-      <div class="card-field">
-        <span class="card-field-label">${f.label}:</span>
-        <span id="${f.key}" class="card-field-value">${val}</span>
-      </div>`;
-  }).join('');
 
   const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const verifyText = cfg.verifyStrip || `• Документ оновлено о ${timeStr} • Перевірено`;
-
-  return `
-    ${skeleton}
-    <div class="card-sync-badge" id="sync-${cfg.dotsIndex}" title="Синхронізовано"></div>
-    <div class="card-header">
-      <h1 class="card-title-bold">${cfg.label}</h1>
-      ${cfg.chip ? `<div class="card-chip"><span>${cfg.chip}</span></div>` : ''}
-    </div>
-    <div class="card-body">
-      ${photo}
-      <div class="card-fields">${fields}</div>
-    </div>
-    <div class="card-verify-strip">
-      <span class="card-verify-text">${verifyText}</span>
-    </div>
-    <div class="card-footer">
-      ${_renderFio3Lines(nameVal, `name-${cfg.dotsIndex}`)}
-      <div class="card-dots moreInfo" data-index="${cfg.dotsIndex}" title="Дії">
-        <div class="card-dot-circle"></div>
-        <div class="card-dot-circle"></div>
-        <div class="card-dot-circle"></div>
-      </div>
-    </div>`;
+  const p = n => String(n).padStart(2, '0');
+  const dateStr = `${p(now.getDate())}.${p(now.getMonth()+1)}.${now.getFullYear()}`;
+  const dtStr   = `${p(now.getHours())}:${p(now.getMinutes())} | ${dateStr}`;
+  document.querySelectorAll('#getCurrentDateTime').forEach(el => el.textContent = dtStr);
+  document.querySelectorAll('.dataNow').forEach(el => el.textContent = dateStr);
 }
 
-function _buildCardBackHTML() {
-  return `
-    <div class="card-back-inner">
-      <div class="card-timer">
-        Код діятиме ще
-        <span class="card-timer-val" data-time="2:59">2:59</span>
-        хв
-      </div>
-      <div class="card-qr-area">
-        <div class="qrcode changeCode"></div>
-        <div class="shText" style="display:none">
-          <span>1977</span><span>3411</span><span>48475</span>
-        </div>
-      </div>
-      <div class="card-qr-toggle qrChange">
-        <div data-index="1">
-          <div class="active"><img src="assets/qr-code.png" alt=""></div>
-          <span>QR-код</span>
-        </div>
-        <div data-index="2">
-          <div><img src="assets/free-icon-barcode-7797192.png" alt=""></div>
-          <span>Штрихкод</span>
-        </div>
-      </div>
-    </div>`;
+/* ══════════════════════════════════════════════════════
+   2. CARD FLIP — ЄДИНА ПРАВИЛЬНА РЕАЛІЗАЦІЯ
+   ══════════════════════════════════════════════════════ */
+// WeakMap зберігає стан та таймер кожної картки
+const _cardMeta = new WeakMap();
+
+function _getCardMeta(slider) {
+  if (!_cardMeta.has(slider)) {
+    _cardMeta.set(slider, { flipped: false, timerId: null, seconds: 179 });
+  }
+  return _cardMeta.get(slider);
 }
 
-function buildAllCards() {
-  Object.keys(CARD_CONFIGS).forEach(docId => {
-    const slider = document.querySelector(`.slider.${docId}`);
-    if (!slider) return;
-    const cfg = CARD_CONFIGS[docId];
+/**
+ * flipCard — перегортає картку.
+ * Викликається при кліку на .slider (але не на кнопки всередині).
+ */
+function flipCard(slider) {
+  const meta = _getCardMeta(slider);
 
-    let front = slider.querySelector('.content.front');
-    let back  = slider.querySelector('.content.back');
+  // Блокуємо повторний клік під час анімації
+  if (slider.classList.contains('is-flipping')) return;
 
-    if (!front) { front = document.createElement('div'); front.className = 'content front'; slider.appendChild(front); }
-    if (!back)  { back  = document.createElement('div'); back.className  = 'content back';  slider.appendChild(back);  }
+  slider.classList.add('is-flipping');
+  setTimeout(() => slider.classList.remove('is-flipping'), 560);
 
-    if (!front.children || front.children.length === 0) {
-      front.innerHTML = _buildCardFrontHTML(cfg, APP_DATA);
+  meta.flipped = !meta.flipped;
+
+  if (meta.flipped) {
+    slider.classList.add('is-flipped');
+    _startQrTimer(slider, meta);
+    if (navigator.vibrate) navigator.vibrate(8);
+  } else {
+    slider.classList.remove('is-flipped');
+    _stopQrTimer(meta);
+  }
+}
+
+/**
+ * resetCard — скидаємо картку до лицьової сторони (при свайпі).
+ */
+function resetCard(slider) {
+  const meta = _getCardMeta(slider);
+  if (!meta.flipped) return;
+  meta.flipped = false;
+  slider.classList.remove('is-flipped', 'is-flipping');
+  _stopQrTimer(meta);
+}
+
+window.flipCard  = flipCard;
+window.resetCard = resetCard;
+
+/* ══════════════════════════════════════════════════════
+   3. QR TIMER
+   ══════════════════════════════════════════════════════ */
+function _startQrTimer(slider, meta) {
+  _stopQrTimer(meta);
+  meta.seconds = 179;
+
+  const timerEl = slider.querySelector('[data-time]');
+  if (!timerEl) return;
+
+  function _tick() {
+    if (meta.seconds <= 0) {
+      // Авто-оновлення коду — скидаємо на 3 хвилини
+      meta.seconds = 179;
     }
-    if (!back.children || back.children.length === 0) {
-      back.innerHTML  = _buildCardBackHTML();
+    const m = Math.floor(meta.seconds / 60);
+    const s = String(meta.seconds % 60).padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+    meta.seconds--;
+  }
+
+  _tick();
+  meta.timerId = setInterval(_tick, 1000);
+}
+
+function _stopQrTimer(meta) {
+  if (meta.timerId) {
+    clearInterval(meta.timerId);
+    meta.timerId = null;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   4. QR / BARCODE TOGGLE
+   ══════════════════════════════════════════════════════ */
+function _setupQrToggle(container) {
+  const slider  = container.closest('.slider');
+  if (!slider) return;
+
+  const qrBtn   = container.querySelector('[data-index="1"]');
+  const shBtn   = container.querySelector('[data-index="2"]');
+  const codeDiv = slider.querySelector('.changeCode');
+  const shText  = slider.querySelector('.shText');
+
+  if (!qrBtn || !shBtn || !codeDiv) return;
+
+  function _setMode(mode) {
+    const qrDot = qrBtn.querySelector('div');
+    const shDot = shBtn.querySelector('div');
+    const qrImg = qrBtn.querySelector('img');
+    const shImg = shBtn.querySelector('img');
+
+    if (mode === 'qr') {
+      codeDiv.className = 'qrcode changeCode';
+      if (shText) { shText.style.display = 'none'; shText.classList.remove('visible'); }
+      qrDot?.classList.add('active');
+      shDot?.classList.remove('active');
+      if (qrImg) qrImg.style.filter = '';    // чорна іконка на чорному фоні
+      if (shImg) shImg.style.filter = '';
+    } else {
+      codeDiv.className = 'shcode changeCode';
+      if (shText) { shText.style.display = 'flex'; shText.classList.add('visible'); }
+      shDot?.classList.add('active');
+      qrDot?.classList.remove('active');
+      if (shImg) shImg.style.filter = '';
+      if (qrImg) qrImg.style.filter = '';
+    }
+  }
+
+  // Ставимо QR активним за замовчуванням
+  _setMode('qr');
+
+  qrBtn.addEventListener('click', e => { e.stopPropagation(); _setMode('qr'); });
+  shBtn.addEventListener('click', e => { e.stopPropagation(); _setMode('sh'); });
+}
+
+/* ══════════════════════════════════════════════════════
+   5. SWIPER — ДОКУМЕНТИ
+   ══════════════════════════════════════════════════════ */
+let docSwiper  = null;
+let newsSwiper = null;
+
+function initSwipers() {
+  if (typeof Swiper === 'undefined') return;
+
+  // Запобігаємо повторній ініціалізації
+  const docEl = document.querySelector('.documentSlider');
+  if (docEl && !docEl.swiper) {
+    docSwiper = new Swiper('.documentSlider', {
+      slidesPerView: 1.08,
+      centeredSlides: true,
+      spaceBetween: 14,
+      speed: 420,
+      grabCursor: true,
+      resistanceRatio: 0.75,
+      touchRatio: 1.1,
+      touchAngle: 45,
+      threshold: 8,          // менше 8px — клік, більше — свайп
+      longSwipesRatio: 0.25,
+      preventClicks: false,
+      preventClicksPropagation: false,
+      watchSlidesProgress: true,
+      pagination: {
+        el: '.swiper-pagination',
+        clickable: true,
+        dynamicBullets: false,
+      },
+      on: {
+        // Скидаємо перегорнуті картки при свайпі
+        slideChangeTransitionStart() {
+          document.querySelectorAll('.slider.is-flipped').forEach(s => resetCard(s));
+        },
+        // Паралакс-масштаб для ефекту стеку
+        progress(swiper) {
+          swiper.slides.forEach(slide => {
+            const p    = Math.abs(slide.progress || 0);
+            const sc   = 1 - Math.min(p * 0.05, 0.08);
+            const op   = 1 - Math.min(p * 0.22, 0.4);
+            const ty   = Math.min(p * 8, 14);
+            slide.style.transform = `scale(${sc}) translateY(${ty}px)`;
+            slide.style.opacity   = op;
+          });
+        },
+        setTransition(swiper, dur) {
+          swiper.slides.forEach(s => {
+            s.style.transitionDuration = dur + 'ms';
+          });
+        },
+      },
+    });
+  } else if (docEl?.swiper) {
+    docSwiper = docEl.swiper;
+  }
+
+  const newsEl = document.querySelector('.sliderNews');
+  if (newsEl && !newsEl.swiper) {
+    newsSwiper = new Swiper('.sliderNews', {
+      slidesPerView: 1,
+      spaceBetween: 0,
+      speed: 360,
+      pagination: { el: '.swiper-pagination2', clickable: true },
+    });
+  } else if (newsEl?.swiper) {
+    newsSwiper = newsEl.swiper;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   6. CARD CLICK HANDLER
+   ══════════════════════════════════════════════════════ */
+function _onCardClick(e) {
+  // Ігноруємо кліки на кнопки / перемикачі / dots
+  if (e.target.closest(
+    '.qrChange, .card-qr-toggle, .copyPng, .moreInfo, .card-dots, ' +
+    '.card-copy-btn, button, .action-card-circle, .add-doc-card, ' +
+    '.swap-doc-card, .qrChangeInfo, [data-index]'
+  )) return;
+
+  flipCard(this);
+}
+
+function _bindCardClicks() {
+  document.querySelectorAll('.slider').forEach(slider => {
+    // Видаляємо старий listener перед додаванням нового
+    slider.removeEventListener('click', _onCardClick);
+    slider.addEventListener('click', _onCardClick);
+
+    // QR toggle
+    slider.querySelectorAll('.qrChange, .card-qr-toggle').forEach(c => _setupQrToggle(c));
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   7. ACTION SHEETS (bottom sheets)
+   ══════════════════════════════════════════════════════ */
+let _activeSheet = null;
+
+function _openSheet(sheetEl) {
+  if (!sheetEl) return;
+  if (_activeSheet && _activeSheet !== sheetEl) _closeSheet(_activeSheet);
+
+  _activeSheet = sheetEl;
+  sheetEl.classList.add('active');
+  const inner = sheetEl.querySelector(':scope > div');
+  if (inner) inner.classList.add('active');
+
+  // Свайп вниз щоб закрити
+  _initSheetSwipe(sheetEl);
+}
+
+function _closeSheet(sheetEl) {
+  if (!sheetEl) return;
+  sheetEl.classList.remove('active');
+  const inner = sheetEl.querySelector(':scope > div');
+  if (inner) inner.classList.remove('active');
+  if (_activeSheet === sheetEl) _activeSheet = null;
+}
+
+function _initSheetSwipe(sheet) {
+  const inner = sheet.querySelector(':scope > div') || sheet;
+  let startY = 0;
+
+  function onStart(e) { startY = (e.touches?.[0] ?? e).clientY; }
+  function onMove(e) {
+    const dy = (e.touches?.[0] ?? e).clientY - startY;
+    if (dy > 0) inner.style.transform = `translateY(${dy * 0.6}px)`;
+  }
+  function onEnd(e) {
+    const dy = (e.changedTouches?.[0] ?? e).clientY - startY;
+    inner.style.transform = '';
+    inner.style.transition = '';
+    if (dy > 80) _closeSheet(sheet);
+  }
+
+  sheet.addEventListener('touchstart', onStart, { passive: true, once: false });
+  sheet.addEventListener('touchmove',  onMove,  { passive: true });
+  sheet.addEventListener('touchend',   onEnd,   { passive: true });
+}
+
+function _setupActionSheets() {
+  // Dots / moreInfo → відкриває sheet
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest('.moreInfo, .card-dots, .arrowSvg[data-index]');
+    if (!trigger) return;
+    e.stopPropagation();
+    const idx   = trigger.getAttribute('data-index');
+    const sheet = idx ? document.querySelector(`.${idx}_block_div`) : null;
+    if (sheet) _openSheet(sheet);
+  });
+
+  // Кнопки закриття
+  document.querySelectorAll('.close_block').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx   = btn.getAttribute('data-index');
+      const sheet = idx
+        ? document.querySelector(`.${idx}_block_div`)
+        : btn.closest('.document_block_div');
+      _closeSheet(sheet);
+    });
+  });
+
+  // Клік поза sheet
+  document.addEventListener('click', e => {
+    if (_activeSheet && !_activeSheet.contains(e.target)) {
+      _closeSheet(_activeSheet);
     }
   });
 
-  _rebindCardHandlers();
+  // QR toggle всередині sheet (qrChangeInfo)
+  document.querySelectorAll('.qrChangeInfo').forEach(c => {
+    // Знаходимо відповідний slider через index
+    const sheetDiv = c.closest('.document_block_div');
+    if (!sheetDiv) return;
+    const docId = Array.from(sheetDiv.classList)
+      .find(cl => cl.endsWith('_block_div'))
+      ?.replace('_block_div', '');
+    const slider = docId ? document.querySelector(`.slider.${docId}`) : null;
+    if (!slider) return;
+
+    const qBtn = c.querySelector('[data-index="1"]');
+    const sBtn = c.querySelector('[data-index="2"]');
+    const cd   = slider.querySelector('.changeCode');
+    const st   = slider.querySelector('.shText');
+    if (!qBtn || !sBtn || !cd) return;
+
+    qBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      cd.className = 'qrcode changeCode';
+      if (st) { st.style.display = 'none'; st.classList.remove('visible'); }
+      qBtn.querySelector('div')?.classList.add('active');
+      sBtn.querySelector('div')?.classList.remove('active');
+    });
+    sBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      cd.className = 'shcode changeCode';
+      if (st) { st.style.display = 'flex'; st.classList.add('visible'); }
+      sBtn.querySelector('div')?.classList.add('active');
+      qBtn.querySelector('div')?.classList.remove('active');
+    });
+  });
 }
 
-function _refreshAllCards(data) {
-  Object.keys(CARD_CONFIGS).forEach(docId => {
-    const slider = document.querySelector(`.slider.${docId}`);
-    if (!slider) return;
-    const cfg = CARD_CONFIGS[docId];
+/* ══════════════════════════════════════════════════════
+   8. MODALS (full-screen bottom sheets)
+   ══════════════════════════════════════════════════════ */
+function _setupModals() {
+  const overlay = document.getElementById('overlay');
 
-    cfg.fields.forEach(f => {
-      slider.querySelectorAll(`#${f.key}, [data-db-field="${f.key}"]`).forEach(el => {
-        if (data[f.key]) el.textContent = data[f.key];
+  function openModal(modal, fromBlockClass) {
+    if (!modal) return;
+    modal.classList.add('open');
+    if (overlay) { overlay.classList.remove('hidden'); overlay.style.opacity = '1'; }
+    if (fromBlockClass) _closeSheet(document.querySelector('.' + fromBlockClass));
+    _initModalSwipe(modal);
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('open');
+  }
+
+  function _initModalSwipe(modal) {
+    let startY = 0, dragging = false;
+    const handle = modal.querySelector('.handle');
+    const scrollArea = modal.querySelector('.modal-content') || modal;
+
+    function onStart(e) {
+      startY = (e.touches?.[0] ?? e).clientY; dragging = true;
+      modal.style.transition = 'none';
+    }
+    function onMove(e) {
+      if (!dragging || scrollArea.scrollTop > 0) return;
+      const dy = (e.touches?.[0] ?? e).clientY - startY;
+      if (dy > 0) modal.style.top = `calc(6% + ${dy}px)`;
+    }
+    function onEnd(e) {
+      if (!dragging) return; dragging = false;
+      modal.style.transition = 'top .35s cubic-bezier(.2,.9,.3,1)';
+      const dy = (e.changedTouches?.[0] ?? e).clientY - startY;
+      if (dy > 100) {
+        closeModal(modal);
+        if (overlay) { overlay.classList.add('hidden'); }
+      } else {
+        modal.style.top = '6%';
+      }
+    }
+
+    modal.addEventListener('touchstart', onStart, { passive: true });
+    modal.addEventListener('touchmove',  onMove,  { passive: true });
+    modal.addEventListener('touchend',   onEnd,   { passive: true });
+    handle?.addEventListener('click', () => {
+      closeModal(modal);
+      if (overlay) overlay.classList.add('hidden');
+    });
+  }
+
+  // Прив'язки trigger → modal
+  const MAP = {
+    '#fullInfoPasport': { modal: 'pasport-modal', block: 'pasport_block_div' },
+    '#fullInfoZagran':  { modal: 'zagran-modal',  block: 'zagran_block_div'  },
+    '#fullInfoStudy':   { modal: 'study-modal',   block: 'study_block_div'   },
+    '#fullInfoeDoc':    { modal: 'eDoc-modal',     block: 'eDoc_block_div'    },
+    '#fullInfoPrava':   { modal: 'prava-modal',    block: 'prava_block_div'   },
+    '#fullInfoZbroya':  { modal: 'zbroya-modal',   block: 'zbroya_block_div'  },
+    '#fullInfoDip':     { modal: 'dip-modal',      block: 'dip_block_div'     },
+    '#fullInfoPodatki': { modal: 'podatki-modal',  block: 'podatki_block_div' },
+  };
+
+  Object.entries(MAP).forEach(([sel, cfg]) => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        openModal(document.getElementById(cfg.modal), cfg.block);
       });
     });
+  });
 
-    const nameEl = slider.querySelector(`#${cfg.nameKey}-${docId}, #name-${docId}`);
-    if (nameEl && data[cfg.nameKey]) {
-      const parts = data[cfg.nameKey].trim().split(/\s+/);
-      const divs = nameEl.querySelectorAll('div');
-      if (divs.length === 3) {
-        divs[0].textContent = parts[0] || '';
-        divs[1].textContent = parts[1] || '';
-        divs[2].textContent = parts.slice(2).join(' ') || '';
-      } else {
-        nameEl.textContent = data[cfg.nameKey];
+  // Делегований клік (для динамічно доданих тригерів)
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[id^="fullInfo"]');
+    if (t) {
+      const key = '#' + t.id;
+      if (MAP[key]) {
+        e.stopPropagation();
+        openModal(document.getElementById(MAP[key].modal), MAP[key].block);
       }
     }
-
-    if (cfg.hasPhoto && data.mainPhoto) {
-      slider.querySelectorAll('.card-photo, #imgPassport, #imgZagran, #imgStudent, #imgRights').forEach(img => img.src = data.mainPhoto);
-    }
-  });
-}
-
-function _rebindCardHandlers() {
-  document.querySelectorAll('.slider').forEach(slider => {
-    slider.removeEventListener('click', _cardClickHandler);
-    slider.addEventListener('click', _cardClickHandler);
   });
 
-  document.querySelectorAll('.moreInfo, .card-dots').forEach(btn => {
-    btn.removeEventListener('click', _dotsClickHandler);
-    btn.addEventListener('click', _dotsClickHandler);
-  });
-
-  setupCardActionSheets();
-
-  document.querySelectorAll('.copyPng, .card-copy-btn').forEach(btn => {
-    btn.removeEventListener('click', _copyHandler);
-    btn.addEventListener('click', _copyHandler);
-  });
-}
-
-function _cardClickHandler(e) {
-  if (!this || !this.classList || this.classList.contains('add-swap-card-container')) return;
-  if (e.target.closest('.card-dots, .qrChange, .copyPng, .moreInfo, .card-copy-btn, button, .action-card-circle, .add-doc-card, .swap-doc-card')) return;
-  if (typeof window.flipCard === 'function') {
-    window.flipCard(this, e);
-  } else {
-    flipCard(this, e);
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      document.querySelectorAll('.modal.open').forEach(m => closeModal(m));
+      overlay.classList.add('hidden');
+    });
   }
 }
 
-function _dotsClickHandler(e) {
-  e.stopPropagation();
-  let index = this?.getAttribute ? this.getAttribute('data-index') : null;
-  if (!index) {
-    const slider = this?.closest ? this.closest('.slider') : null;
-    if (slider) {
-      const known = ['eDoc', 'podatki', 'pasport', 'dip', 'zagran', 'study', 'prava', 'zbroya'];
-      for (const k of known) {
-        if (slider.classList.contains(k)) { index = k; break; }
-      }
-    }
-  }
-  if (!index) return;
-  const sheet = document.querySelector(`.${index}_block_div`);
-  if (sheet) {
-    sheet.classList.add('active');
-    const inner = sheet.querySelector(':scope > div') || sheet.firstElementChild;
-    if (inner) inner.classList.add('active');
-  }
-}
-
-function _copyHandler(e) {
-  e.stopPropagation();
-  const rnokppText = this.getAttribute('data-copy') || document.getElementById('rnokpp')?.textContent || APP_DATA.rnokpp || '3997406358';
-  if (rnokppText && navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(rnokppText).catch(() => {});
-  }
-  showNotification('Номер скопійовано в буфер обміну ✓');
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 4. SKELEtons & SYNC
-// ═══════════════════════════════════════════════════════════════
-function hideCardSkeleton(docId) {
-  const sk = document.getElementById('skeleton-' + docId);
-  if (sk) sk.classList.add('hidden');
-}
-
-function showCardSkeleton(docId) {
-  const sk = document.getElementById('skeleton-' + docId);
-  if (sk) sk.classList.remove('hidden');
-}
-
-function hideAllSkeletons() {
-  document.querySelectorAll('.card-skeleton').forEach(sk => sk.classList.add('hidden'));
-}
-
-function showAllSkeletons() {
-  document.querySelectorAll('.card-skeleton').forEach(sk => sk.classList.remove('hidden'));
-}
-
-function setSyncState(docId, state) {
-  const badge = document.getElementById('sync-' + docId);
-  if (!badge) return;
-  badge.classList.remove('syncing', 'error');
-  if (state === 'syncing') badge.classList.add('syncing');
-  if (state === 'error')   badge.classList.add('error');
-}
-
-function setAllSyncing(state) {
-  Object.keys(CARD_CONFIGS).forEach(id => setSyncState(id, state));
-}
-
-window.setSyncState = setSyncState;
-window.setAllSyncing = setAllSyncing;
-
-function setOfflineBanner(show) {
-  let banner = document.getElementById('offline-banner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'offline-banner';
-    banner.className = 'offline-banner';
-    banner.innerHTML = '<span class="offline-banner-dot"></span><span>Офлайн режим — дані можуть бути застарілими</span>';
-    document.body.prepend(banner);
-  }
-  if (show) banner.classList.add('visible');
-  else banner.classList.remove('visible');
-}
-
-function initOfflineWatcher() {
-  window.addEventListener('online', () => setOfflineBanner(false));
-  window.addEventListener('offline', () => setOfflineBanner(true));
-  if (!navigator.onLine) setOfflineBanner(true);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 5. ІНІЦІАЛІЗАЦІЯ З БД
-// ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
+   9. DB — ініціалізація та polling
+   ══════════════════════════════════════════════════════ */
 async function initFromDB() {
   if (typeof DiyaDB === 'undefined') {
-    console.warn('[App] DiyaDB не підключено. Використовуємо localStorage.');
+    console.info('[App] DiyaDB не підключено → використовуємо values.js + localStorage');
     mergeData({});
-    buildAllCards();
     applyDataToDOM();
-    setTimeout(hideAllSkeletons, 300);
+    _hideAllSkeletons();
+    // Показуємо підказку про налаштування
+    _showDbConfigHint();
     return;
   }
 
-  showAllSkeletons();
-  setAllSyncing('syncing');
+  _showAllSkeletons();
+  _setSyncAll('syncing');
 
   try {
-    const dbData = await DiyaDB.load();
-    mergeData(dbData);
-    buildAllCards();
+    const data = await DiyaDB.load();
+    mergeData(data);
     applyDataToDOM();
-    setAllSyncing('ok');
-    if (navigator.onLine) setOfflineBanner(false);
-    setTimeout(hideAllSkeletons, 350);
+    _setSyncAll('ok');
+    _hideAllSkeletons();
 
-    try { localStorage.setItem(LS_KEY, JSON.stringify(dbData || {})); } catch (e) {}
+    // Зберігаємо у localStorage
+    try { localStorage.setItem(LS_KEY, JSON.stringify(data || {})); } catch {}
 
-    const onUpdate = (fresh) => {
+    // Підключаємо SSE або polling для live-оновлень
+    DiyaDB.connectSSE(fresh => {
       mergeData(fresh);
-      buildAllCards();
       applyDataToDOM(fresh);
-      setAllSyncing('ok');
-      hideAllSkeletons();
+      _setSyncAll('ok');
+      try { localStorage.setItem(LS_KEY, JSON.stringify(fresh)); } catch {}
       showNotification('✓ Дані оновлено ботом', true);
-    };
-
-    DiyaDB.connectSSE(onUpdate);
+    });
 
   } catch (err) {
-    console.error('[App] DB init error:', err);
+    console.error('[App] DB error:', err);
     mergeData({});
-    buildAllCards();
     applyDataToDOM();
-    setAllSyncing('error');
-    setOfflineBanner(true);
-    setTimeout(hideAllSkeletons, 300);
+    _setSyncAll('error');
+    _setOfflineBanner(true);
+    _hideAllSkeletons();
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 6. СПЛЕШ + ПІН
-// ═══════════════════════════════════════════════════════════════
-function initSplash() {
+function _showDbConfigHint() {
+  // Показуємо тільки якщо GitHub Raw ще не налаштовано
+  if (typeof DiyaDB !== 'undefined') return;
+  let hint = document.querySelector('.db-config-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.className = 'db-config-hint';
+    hint.textContent = '⚙️ Налаштуй db.js — вкажи своє GitHub репо або API';
+    document.body.appendChild(hint);
+  }
+  hint.classList.add('visible');
+  setTimeout(() => hint.classList.remove('visible'), 6000);
+}
+
+function _showAllSkeletons() {
+  document.querySelectorAll('.card-skeleton').forEach(s => s.classList.remove('hidden'));
+}
+function _hideAllSkeletons() {
+  document.querySelectorAll('.card-skeleton').forEach(s => s.classList.add('hidden'));
+}
+function _setSyncAll(state) {
+  document.querySelectorAll('.card-sync-badge').forEach(b => {
+    b.classList.remove('syncing', 'error');
+    if (state === 'syncing') b.classList.add('syncing');
+    if (state === 'error')   b.classList.add('error');
+  });
+}
+function _setOfflineBanner(show) {
+  let b = document.getElementById('offline-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'offline-banner'; b.className = 'offline-banner';
+    b.innerHTML = '<span class="offline-banner-dot"></span><span>Офлайн — дані можуть бути застарілими</span>';
+    document.body.prepend(b);
+  }
+  show ? b.classList.add('visible') : b.classList.remove('visible');
+}
+
+window.setSyncState = (id, state) => {
+  const b = document.getElementById('sync-' + id);
+  if (!b) return;
+  b.classList.remove('syncing', 'error');
+  if (state === 'syncing') b.classList.add('syncing');
+  if (state === 'error')   b.classList.add('error');
+};
+window.setAllSyncing = _setSyncAll;
+
+/* ══════════════════════════════════════════════════════
+   10. PIN + SPLASH
+   ══════════════════════════════════════════════════════ */
+let _enteredPin = '';
+const _correctPin = (() => {
+  try {
+    const stored = localStorage.getItem(PIN_KEY);
+    if (stored) return stored;
+  } catch {}
+  return typeof entryPin !== 'undefined' ? String(entryPin) : '1234';
+})();
+
+function _updatePinDots() {
+  document.querySelectorAll('.start-vhod > div').forEach((dot, i) => {
+    dot.classList.toggle('active', i < _enteredPin.length);
+  });
+}
+
+function _shakePin() {
+  const block = document.querySelector('.start-block');
+  if (!block) return;
+  const seq = [[−12,0],[12,70],[−8,140],[8,210],[0,280]];
+  seq.forEach(([x,t]) => setTimeout(() => block.style.transform = `translateX(${x}px)`, t));
+  if (navigator.vibrate) navigator.vibrate([40,20,40]);
+}
+
+function _unlockApp() {
+  const startDiv = document.querySelector('.start-div');
+  const main = document.querySelector('.main');
+  if (startDiv) {
+    Object.assign(startDiv.style, { opacity:'0', transform:'scale(.96)', transition:'opacity .3s, transform .3s' });
+    setTimeout(() => { startDiv.classList.remove('active'); startDiv.style.cssText = ''; }, 320);
+  }
+  if (main) {
+    main.classList.add('active');
+    switchTab(2);
+    requestAnimationFrame(() => _triggerCardEntrance());
+  }
+}
+
+function handlePinDigit(digit) {
+  if (digit === 'del') { _enteredPin = _enteredPin.slice(0,-1); _updatePinDots(); return; }
+  if (_enteredPin.length >= 4) return;
+  _enteredPin += digit;
+  _updatePinDots();
+  if (_enteredPin.length === 4) {
+    if (_enteredPin === _correctPin) { setTimeout(_unlockApp, 180); }
+    else { setTimeout(() => { _shakePin(); _enteredPin = ''; _updatePinDots(); }, 260); }
+  }
+}
+window.handlePinDigit = handlePinDigit;
+
+function _triggerCardEntrance() {
+  document.querySelectorAll('.documentSlider .slider').forEach((card, i) => {
+    card.classList.remove('animate-card-entrance');
+    card.style.animationDelay = `${i * 70}ms`;
+    void card.offsetWidth; // reflow
+    card.classList.add('animate-card-entrance');
+  });
+}
+window.triggerCardEntranceAnimation = _triggerCardEntrance;
+
+function _initSplash() {
   const loadpage = document.querySelector('.loadpage');
   const startDiv = document.querySelector('.start-div');
   setTimeout(() => {
@@ -597,1005 +653,394 @@ function initSplash() {
       setTimeout(() => {
         loadpage.style.display = 'none';
         if (startDiv) startDiv.classList.add('active');
-      }, 600);
+      }, 550);
     }
-  }, 1500);
+  }, 1400);
 }
 
-let enteredPin = '';
-const correctPin = typeof entryPin !== 'undefined' ? entryPin : '1234';
-
-function updatePinDots() {
-  document.querySelectorAll('.start-vhod > div').forEach((dot, idx) => {
-    dot.classList.toggle('active', idx < enteredPin.length);
-  });
-}
-
-function triggerCardEntranceAnimation() {
-  const cards = document.querySelectorAll('.documentSlider .slider');
-  cards.forEach((card, idx) => {
-    card.classList.remove('animate-card-entrance');
-    card.style.animationDelay = `${idx * 80}ms`;
-    void card.offsetWidth;
-    card.classList.add('animate-card-entrance');
-  });
-}
-
-window.triggerCardEntranceAnimation = triggerCardEntranceAnimation;
-
-function unlockApp() {
-  const startDiv = document.querySelector('.start-div');
-  const main = document.querySelector('.main');
-  if (startDiv) {
-    startDiv.style.opacity = '0';
-    startDiv.style.transform = 'scale(0.96)';
-    setTimeout(() => { startDiv.classList.remove('active'); startDiv.style.display = 'none'; }, 350);
-  }
-  if (main) {
-    main.classList.add('active');
-    switchTab(2);
-    setTimeout(triggerCardEntranceAnimation, 120);
-  }
-}
-
-function shakePin() {
-  const block = document.querySelector('.start-block');
-  if (!block) return;
-  [[-12,0],[12,80],[-8,160],[8,240],[0,320]].forEach(([x,t]) =>
-    setTimeout(() => block.style.transform = `translateX(${x}px)`, t)
-  );
-  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-}
-
-function handlePinDigit(digit) {
-  if (digit === 'del') { enteredPin = enteredPin.slice(0, -1); updatePinDots(); return; }
-  if (enteredPin.length >= 4) return;
-  enteredPin += digit;
-  updatePinDots();
-  if (enteredPin.length === 4) {
-    if (enteredPin === correctPin) {
-      setTimeout(unlockApp, 150);
-    } else {
-      setTimeout(() => { shakePin(); enteredPin = ''; updatePinDots(); }, 250);
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 7. ВКЛАДКИ, TOAST, ТЕМИ, PULL-TO-REFRESH
-// ═══════════════════════════════════════════════════════════════
-let docSwiper = null;
-let newsSwiper = null;
-
+/* ══════════════════════════════════════════════════════
+   11. TABS
+   ══════════════════════════════════════════════════════ */
 function switchTab(index) {
-  document.querySelectorAll('.block').forEach(b => b?.classList?.remove('active'));
-  document.querySelectorAll('.footer > div:not(.nav-btn--ai)').forEach(btn => btn?.classList?.remove('active'));
-  const tabBlocks = [
+  document.querySelectorAll('.block, .blockStart').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.footer > div[data-index]').forEach(b => b.classList.remove('active'));
+
+  const tabs = [
     document.querySelector('.blockStart'),
     document.querySelector('.block2'),
+    document.querySelectorAll('.block1')[0],
     document.querySelectorAll('.block1')[1],
-    document.querySelectorAll('.block1')[2]
   ];
-  const activeBlock = tabBlocks[index - 1];
-  if (activeBlock?.classList) activeBlock.classList.add('active');
-  const activeFooterBtn = document.querySelector(`.footer > div[data-index="${index}"]`);
-  if (activeFooterBtn?.classList) activeFooterBtn.classList.add('active');
+  tabs[index - 1]?.classList.add('active');
+  document.querySelector(`.footer > div[data-index="${index}"]`)?.classList.add('active');
+
   if (index === 2) {
-    if (docSwiper) docSwiper.update();
-    triggerCardEntranceAnimation();
+    docSwiper?.update();
+    _triggerCardEntrance();
   }
 }
 window.switchTab = switchTab;
 
-function showNotification(msg, isBotUpdate = false) {
-  const notif = document.getElementById('notification');
-  if (notif) {
-    if (msg) notif.textContent = msg;
-    if (isBotUpdate) notif.classList.add('toast-bot-update');
-    else notif.classList.remove('toast-bot-update');
-    notif.classList.add('show');
-    setTimeout(() => {
-      notif.classList.remove('show');
-      notif.classList.remove('toast-bot-update');
-    }, 3000);
-  }
+/* ══════════════════════════════════════════════════════
+   12. TOAST
+   ══════════════════════════════════════════════════════ */
+let _toastTimer = null;
+function showNotification(msg, isBot = false) {
+  const el = document.getElementById('notification');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('toast-bot-update', !!isBot);
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.classList.remove('show', 'toast-bot-update');
+  }, 3000);
 }
+window.showNotification = showNotification;
 
-
-
-// ═══════════════════════════════════════════════════════════════
-// СЕКЦІЯ «БЕЗПЕКА» В НАЛАШТУВАННЯХ (Security & Biometrics Toggle)
-// ═══════════════════════════════════════════════════════════════
-const BIOMETRIC_PREF_KEY = 'biometricsEnabled';
-
-function isBiometricsEnabled() {
-  if (APP_DATA[BIOMETRIC_PREF_KEY] !== undefined) {
-    return APP_DATA[BIOMETRIC_PREF_KEY] === true || APP_DATA[BIOMETRIC_PREF_KEY] === 'true';
-  }
-  if (_localState[BIOMETRIC_PREF_KEY] !== undefined) {
-    return _localState[BIOMETRIC_PREF_KEY] === true || _localState[BIOMETRIC_PREF_KEY] === 'true';
-  }
-  return true; // За замовчуванням увімкнено
-}
-
-function updateBiometricUIState(enabled) {
-  const bioBtn = document.getElementById('btn-biometrics');
-  if (bioBtn) {
-    bioBtn.style.display = enabled ? 'block' : 'none';
-    bioBtn.style.pointerEvents = enabled ? 'all' : 'none';
-  }
-  const bioToggle = document.getElementById('toggleBiometrics');
-  if (bioToggle) {
-    bioToggle.checked = enabled;
-  }
-}
-
-async function setBiometricsPreference(enabled) {
-  APP_DATA[BIOMETRIC_PREF_KEY] = enabled;
-  _localState[BIOMETRIC_PREF_KEY] = enabled;
-
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(_localState));
-  } catch (e) {}
-
-  // Збереження в локальний кеш DiyaDB
-  if (typeof DiyaDB !== 'undefined' && DiyaDB) {
-    try {
-      const uid = (typeof DiyaDB.getTelegramUserId === 'function')
-        ? DiyaDB.getTelegramUserId()
-        : 'demo_user';
-      const dbKey = 'diya_db_cache_' + uid;
-      let cached = {};
-      try { cached = JSON.parse(localStorage.getItem(dbKey) || '{}'); } catch (err) {}
-      cached[BIOMETRIC_PREF_KEY] = enabled;
-      localStorage.setItem(dbKey, JSON.stringify(cached));
-
-      // Спроба відправити в API, якщо підтримується
-      await DiyaDB.saveField(BIOMETRIC_PREF_KEY, enabled);
-    } catch (err) {
-      console.warn('[DiyaDB] Error saving biometric preference:', err);
-    }
-  }
-
-  updateBiometricUIState(enabled);
-
-  showNotification(
-    enabled
-      ? 'Біометрію (FaceID/TouchID) увімкнено'
-      : 'Біометрію вимкнено — вхід лише за PIN',
-    false
-  );
-}
-
-function openSettingsSheet() {
-  const modal = document.getElementById('settingsSheetModal');
-  if (modal) {
-    updateBiometricUIState(isBiometricsEnabled());
-    modal.classList.add('active');
-  }
-}
-
-function closeSettingsSheet() {
-  const modal = document.getElementById('settingsSheetModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function initSecuritySettings() {
-  updateBiometricUIState(isBiometricsEnabled());
-
-  document.getElementById('btnOpenSettings')?.addEventListener('click', openSettingsSheet);
-  document.getElementById('btnCloseSettingsSheet')?.addEventListener('click', closeSettingsSheet);
-  document.getElementById('rowChangeDbCode')?.addEventListener('click', () => {
-    closeSettingsSheet();
-    window.fbVerificationUI?.show();
-  });
-
-  // PWA Install Prompt wiring
-  let deferredPrompt = null;
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-  const installSublabel = document.getElementById('pwaInstallSublabel');
-
-  if (isStandalone && installSublabel) {
-    installSublabel.textContent = 'Застосунок встановлено на пристрій ✓';
-  }
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (installSublabel && !isStandalone) {
-      installSublabel.textContent = 'Натисніть для встановлення в один клік';
-    }
-  });
-
-  window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
-    if (installSublabel) installSublabel.textContent = 'Застосунок встановлено на пристрій ✓';
-    if (typeof window.showNotification === 'function') {
-      window.showNotification('Дію успішно встановлено на екран!');
-    }
-  });
-
-  const iosModal = document.getElementById('iosPwaInstallModal');
-  document.getElementById('btnCloseIosPwaModal')?.addEventListener('click', () => {
-    iosModal?.classList.remove('active');
-  });
-
-  document.getElementById('rowInstallPwa')?.addEventListener('click', async () => {
-    if (isStandalone) {
-      if (typeof window.showNotification === 'function') {
-        window.showNotification('Застосунок вже встановлено на пристрій ✓');
-      }
-      return;
-    }
-
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        deferredPrompt = null;
-      }
-      closeSettingsSheet();
-      return;
-    }
-
-    if (isIOS) {
-      closeSettingsSheet();
-      iosModal?.classList.add('active');
-      return;
-    }
-
-    if (typeof window.showNotification === 'function') {
-      window.showNotification('Скористайтеся меню браузера для встановлення застосунку');
-    }
-  });
-
-  document.getElementById('settingsSheetModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'settingsSheetModal') closeSettingsSheet();
-  });
-
-  const toggle = document.getElementById('toggleBiometrics');
-  if (toggle) {
-    toggle.checked = isBiometricsEnabled();
-    toggle.addEventListener('change', (e) => {
-      setBiometricsPreference(e.target.checked);
-    });
-  }
-}
-
-function initTelegramTheme() {
-
-  try {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready?.();
-      tg.expand?.();
-      const applyTheme = () => {
-        if (tg.colorScheme === 'dark') {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-          document.documentElement.removeAttribute('data-theme');
-        }
-      };
-      applyTheme();
-      tg.onEvent?.('themeChanged', applyTheme);
-    }
-  } catch (e) {
-    console.warn('[Telegram Theme] Init error:', e);
-  }
-}
-
-function initPullToRefresh() {
+/* ══════════════════════════════════════════════════════
+   13. PULL-TO-REFRESH
+   ══════════════════════════════════════════════════════ */
+function _initPullToRefresh() {
   const container = document.querySelector('.block2');
   if (!container) return;
 
   let ptr = document.getElementById('ptr-indicator');
   if (!ptr) {
     ptr = document.createElement('div');
-    ptr.id = 'ptr-indicator';
-    ptr.className = 'ptr-indicator';
+    ptr.id = 'ptr-indicator'; ptr.className = 'ptr-indicator';
     ptr.innerHTML = '<div class="ptr-spinner"></div>';
-    const sliderContainer = container.querySelector('.documentSlider');
-    if (sliderContainer) {
-      container.insertBefore(ptr, sliderContainer);
-    } else {
-      container.prepend(ptr);
-    }
+    container.querySelector('.documentSlider')?.before(ptr) || container.prepend(ptr);
   }
 
-  let startY = 0;
-  let currentY = 0;
-  let isPulling = false;
-  let isRefreshing = false;
+  let startY = 0, pulling = false, refreshing = false;
 
-  container.addEventListener('touchstart', (e) => {
-    if (container.scrollTop > 5 || isRefreshing) return;
-    startY = e.touches[0].pageY;
-    isPulling = true;
+  container.addEventListener('touchstart', e => {
+    if (container.scrollTop > 0 || refreshing) return;
+    startY = e.touches[0].pageY; pulling = true;
   }, { passive: true });
 
-  container.addEventListener('touchmove', (e) => {
-    if (!isPulling || isRefreshing) return;
-    currentY = e.touches[0].pageY;
-    const diff = currentY - startY;
-    if (diff > 35) {
-      ptr.classList.add('active');
-    } else if (diff <= 0) {
-      ptr.classList.remove('active');
-    }
+  container.addEventListener('touchmove', e => {
+    if (!pulling || refreshing) return;
+    if (e.touches[0].pageY - startY > 40) ptr.classList.add('active');
   }, { passive: true });
 
-  container.addEventListener('touchend', async () => {
-    if (!isPulling || isRefreshing) return;
-    isPulling = false;
-    const diff = currentY - startY;
-    if (diff > 50) {
-      isRefreshing = true;
-      ptr.classList.add('active');
-      setAllSyncing('syncing');
-      try {
-        if (typeof DiyaDB !== 'undefined') {
-          DiyaDB.clearCache();
-          const fresh = await DiyaDB.load();
-          mergeData(fresh);
-          buildAllCards();
-          applyDataToDOM(fresh);
-          setAllSyncing('ok');
-        }
-        showNotification('✓ Дані оновлено');
-      } catch (err) {
-        console.warn('Pull-to-refresh error:', err);
-        setAllSyncing('error');
-      } finally {
-        setTimeout(() => {
-          ptr.classList.remove('active');
-          isRefreshing = false;
-        }, 500);
+  container.addEventListener('touchend', async e => {
+    if (!pulling || refreshing) return;
+    pulling = false;
+    const dy = e.changedTouches[0].pageY - startY;
+    if (dy < 55) { ptr.classList.remove('active'); return; }
+
+    refreshing = true;
+    _setSyncAll('syncing');
+
+    try {
+      if (typeof DiyaDB !== 'undefined') {
+        DiyaDB.clearCache();
+        const fresh = await DiyaDB.load();
+        mergeData(fresh);
+        applyDataToDOM(fresh);
+        _setSyncAll('ok');
       }
-    } else {
-      ptr.classList.remove('active');
+      showNotification('✓ Оновлено');
+    } catch { _setSyncAll('error'); }
+    finally {
+      setTimeout(() => { ptr.classList.remove('active'); refreshing = false; }, 500);
     }
   });
 }
 
-const cardTimers = new Map();
-
-function startCardCountdown(sliderEl) {
-  if (cardTimers.has(sliderEl)) clearInterval(cardTimers.get(sliderEl));
-  const timerText = sliderEl.querySelector('.card-timer-val');
-  if (!timerText) return;
-  let totalSeconds = 179;
-  const interval = setInterval(() => {
-    totalSeconds--;
-    if (totalSeconds < 0) { clearInterval(interval); timerText.textContent = '0:00'; return; }
-    const m = Math.floor(totalSeconds / 60);
-    const s = String(totalSeconds % 60).padStart(2, '0');
-    timerText.textContent = `${m}:${s}`;
-  }, 1000);
-  cardTimers.set(sliderEl, interval);
-}
-
-function flipCard(sliderEl, e) {
-  if (typeof window.flipCard === 'function' && window.flipCard !== flipCard) {
-    window.flipCard(sliderEl, e);
-    return;
-  }
-  const isFlipped = sliderEl.classList.toggle('is-flipped');
-  if (isFlipped) { startCardCountdown(sliderEl); }
-  else {
-    if (cardTimers.has(sliderEl)) { clearInterval(cardTimers.get(sliderEl)); cardTimers.delete(sliderEl); }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 8. МОДАЛКИ ТА ДІЇ
-// ═══════════════════════════════════════════════════════════════
-function setupModals() {
-  const overlay = document.getElementById('overlay');
-
-  function openModal(modal, blockDivClass) {
-    if (!modal) return;
-    modal.style.top = '6%';
-    modal.classList.add('open');
-    if (overlay) {
-      overlay.classList.remove('hidden');
-      overlay.style.opacity = '1';
+/* ══════════════════════════════════════════════════════
+   14. COPY TO CLIPBOARD
+   ══════════════════════════════════════════════════════ */
+function _setupCopy() {
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.copyPng, .card-copy-btn, .modal-copy-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    const val = btn.getAttribute('data-copy')
+      || btn.closest('div')?.querySelector('h3,span')?.textContent?.trim()
+      || '';
+    if (val && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(val).catch(() => {});
     }
-    if (blockDivClass) {
-      const bd = document.querySelector('.' + blockDivClass);
-      if (bd) {
-        bd.classList.remove('active');
-        const bds = bd.querySelectorAll('div');
-        bds.forEach(d => d.classList.remove('active'));
-      }
-    }
-    if (typeof window.initRunningMarquees === 'function') {
-      window.initRunningMarquees();
-    }
-  }
-
-  function closeModal(modal) {
-    if (!modal) return;
-    modal.style.top = '100%';
-    modal.classList.remove('open');
-  }
-
-  function bindModal(triggerId, modalId, blockDivClass) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-
-    document.querySelectorAll(triggerId).forEach(trig => {
-      trig.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        openModal(modal, blockDivClass);
-      });
-    });
-
-    // Touch drag down to dismiss (iOS bottom sheet physics)
-    let startY = 0;
-    let currentY = 0;
-    let isDragging = false;
-    const modalContent = modal.querySelector('.modal-content') || modal;
-
-    modal.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-      currentY = startY;
-      isDragging = true;
-      modal.style.transition = 'none';
-      if (overlay) overlay.style.transition = 'none';
-    }, { passive: true });
-
-    modal.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      currentY = e.touches[0].clientY;
-      const diffY = currentY - startY;
-      if (modalContent.scrollTop <= 0 && diffY > 0) {
-        modal.style.top = `calc(6% + ${diffY}px)`;
-        if (overlay) {
-          overlay.style.opacity = Math.max(0, 1 - diffY / 500);
-        }
-      }
-    }, { passive: true });
-
-    modal.addEventListener('touchend', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      modal.style.transition = 'top 0.35s cubic-bezier(0.2, 0.9, 0.3, 1)';
-      if (overlay) overlay.style.transition = 'opacity 0.3s ease';
-
-      if (currentY - startY > 90) {
-        closeModal(modal);
-        if (overlay) {
-          overlay.classList.add('hidden');
-          overlay.style.opacity = '0';
-        }
-      } else {
-        modal.style.top = '6%';
-        if (overlay) overlay.style.opacity = '1';
-      }
-    });
-
-    const handle = modal.querySelector('.handle');
-    if (handle) {
-      handle.addEventListener('click', () => {
-        closeModal(modal);
-        if (overlay) {
-          overlay.classList.add('hidden');
-          overlay.style.opacity = '0';
-        }
-      });
-    }
-  }
-
-  bindModal('#fullInfoPasport', 'pasport-modal', 'pasport_block_div');
-  bindModal('#fullInfoZagran', 'zagran-modal', 'zagran_block_div');
-  bindModal('#fullInfoStudy', 'study-modal', 'study_block_div');
-  bindModal('#fullInfoeDoc', 'eDoc-modal', 'eDoc_block_div');
-  bindModal('#fullInfoPrava', 'prava-modal', 'prava_block_div');
-  bindModal('#fullInfoZbroya', 'zbroya-modal', 'zbroya_block_div');
-  bindModal('#fullInfoDip', 'dip-modal', 'dip_block_div');
-  bindModal('#fullInfoPodatki', 'podatki-modal', 'podatki_block_div');
-
-  // Delegated click support
-  const modalMapping = {
-    'fullInfoPasport': { modal: 'pasport-modal', block: 'pasport_block_div' },
-    'fullInfoZagran': { modal: 'zagran-modal', block: 'zagran_block_div' },
-    'fullInfoStudy': { modal: 'study-modal', block: 'study_block_div' },
-    'fullInfoeDoc': { modal: 'eDoc-modal', block: 'eDoc_block_div' },
-    'fullInfoPrava': { modal: 'prava-modal', block: 'prava_block_div' },
-    'fullInfoZbroya': { modal: 'zbroya-modal', block: 'zbroya_block_div' },
-    'fullInfoDip': { modal: 'dip-modal', block: 'dip_block_div' },
-    'fullInfoPodatki': { modal: 'podatki-modal', block: 'podatki_block_div' }
-  };
-
-  document.addEventListener('click', (e) => {
-    const trigger = e.target.closest('[id^="fullInfo"]');
-    if (trigger) {
-      const match = modalMapping[trigger.id];
-      if (match) {
-        e.stopPropagation();
-        e.preventDefault();
-        const m = document.getElementById(match.modal);
-        if (m) openModal(m, match.block);
-      }
-    }
-
-    // Modal copy buttons
-    const copyBtn = e.target.closest('.modal-copy-btn, .copyPng');
-    if (copyBtn) {
-      e.stopPropagation();
-      const val = copyBtn.getAttribute('data-copy') || (copyBtn.parentElement ? copyBtn.parentElement.textContent.trim() : '');
-      if (val && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(val.replace(/\s+/g, ' ').trim()).catch(() => {});
-      }
-      const notif = document.getElementById('notification');
-      if (notif) {
-        notif.classList.add('show');
-        setTimeout(() => notif.classList.remove('show'), 2000);
-      }
-    }
-  });
-
-  if (overlay) {
-    overlay.addEventListener('click', () => {
-      document.querySelectorAll('.modal.open').forEach(m => {
-        closeModal(m);
-      });
-      overlay.classList.add('hidden');
-      overlay.style.opacity = '0';
-    });
-  }
-}
-
-function setupAddDocAndChangeOrder() {
-  const btnOpenAddDoc = document.getElementById('btnOpenAddDoc');
-  const addDocModal = document.getElementById('addDocModal');
-  const btnCloseAddDoc = document.getElementById('btnCloseAddDoc');
-
-  if (btnOpenAddDoc && addDocModal) {
-    btnOpenAddDoc.addEventListener('click', (e) => {
-      e.stopPropagation();
-      addDocModal.classList.add('active');
-    });
-  }
-
-  if (btnCloseAddDoc && addDocModal) {
-    btnCloseAddDoc.addEventListener('click', (e) => {
-      e.stopPropagation();
-      addDocModal.classList.remove('active');
-    });
-  }
-
-  if (addDocModal) {
-    addDocModal.addEventListener('click', (e) => {
-      if (e.target === addDocModal) {
-        addDocModal.classList.remove('active');
-      }
-    });
-
-    addDocModal.querySelectorAll('.add-doc-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const title = item.querySelector('span')?.textContent || 'Документ';
-        showNotification(`Запит «${title}» надіслано в реєстр ✓`);
-        addDocModal.classList.remove('active');
-      });
-    });
-  }
-
-  const btnOpenChangeOrder = document.getElementById('btnOpenChangeOrder');
-  const changeOrderScreen = document.getElementById('changeOrderScreen');
-  const btnBackFromChangeOrder = document.getElementById('btnBackFromChangeOrder');
-  const changeOrderList = document.getElementById('changeOrderList');
-
-  if (btnOpenChangeOrder && changeOrderScreen) {
-    btnOpenChangeOrder.addEventListener('click', (e) => {
-      e.stopPropagation();
-      changeOrderScreen.classList.add('active');
-    });
-  }
-
-  if (btnBackFromChangeOrder && changeOrderScreen) {
-    btnBackFromChangeOrder.addEventListener('click', (e) => {
-      e.stopPropagation();
-      changeOrderScreen.classList.remove('active');
-    });
-  }
-
-  if (changeOrderList) {
-    let dragged = null;
-
-    changeOrderList.querySelectorAll('.order-item-card').forEach(card => {
-      card.addEventListener('dragstart', (e) => {
-        dragged = card;
-        card.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-
-      card.addEventListener('dragend', () => {
-        card.classList.remove('dragging');
-        dragged = null;
-        _applyNewOrderFromList();
-      });
-
-      card.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (!dragged || dragged === card) return;
-        const rect = card.getBoundingClientRect();
-        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
-        changeOrderList.insertBefore(dragged, next && card.nextSibling || card);
-      });
-
-      // Touch drag підтримка
-      let startY = 0;
-      const handle = card.querySelector('.order-item-handle') || card;
-      handle.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
-        dragged = card;
-        card.classList.add('dragging');
-      }, { passive: true });
-
-      handle.addEventListener('touchmove', (e) => {
-        if (!dragged) return;
-        const touchY = e.touches[0].clientY;
-        const elem = document.elementFromPoint(e.touches[0].clientX, touchY);
-        const targetCard = elem?.closest('.order-item-card');
-        if (targetCard && targetCard !== dragged && targetCard.parentNode === changeOrderList) {
-          const rect = targetCard.getBoundingClientRect();
-          const next = touchY > rect.top + rect.height / 2;
-          changeOrderList.insertBefore(dragged, next && targetCard.nextSibling || targetCard);
-        }
-      }, { passive: true });
-
-      handle.addEventListener('touchend', () => {
-        if (!dragged) return;
-        dragged.classList.remove('dragging');
-        dragged = null;
-        _applyNewOrderFromList();
-      });
-    });
-
-    function _applyNewOrderFromList() {
-      const keys = Array.from(changeOrderList.querySelectorAll('.order-item-card'))
-        .map(c => c.getAttribute('data-doc'))
-        .filter(Boolean);
-
-      const wrapper = document.querySelector('.documentSlider .swiper-wrapper');
-      if (!wrapper) return;
-
-      const lastSlide = wrapper.querySelector('.add-swap-card-container')?.closest('.swiper-slide');
-
-      keys.forEach(k => {
-        const slide = wrapper.querySelector(`.slider.${k}`)?.closest('.swiper-slide');
-        if (slide) {
-          if (lastSlide) wrapper.insertBefore(slide, lastSlide);
-          else wrapper.appendChild(slide);
-        }
-      });
-
-      if (docSwiper) {
-        docSwiper.update();
-      }
-      showNotification('Порядок документів оновлено ✓');
-    }
-  }
-}
-
-function setupCardActionSheets() {
-  document.querySelectorAll('.document_block_div').forEach(sheet => {
-    sheet.addEventListener('click', e => {
-      if (e.target === sheet) {
-        sheet.classList.remove('active');
-        sheet.querySelector(':scope > div')?.classList.remove('active');
-      }
-    });
-  });
-  document.querySelectorAll('.close_block').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = btn.getAttribute('data-index');
-      const sheet = document.querySelector(`.${idx}_block_div`);
-      sheet?.classList.remove('active');
-      sheet?.querySelector(':scope > div')?.classList.remove('active');
-    });
-  });
-
-  document.querySelectorAll('.qrChange, .card-qr-toggle').forEach(container => {
-    const slider = container.closest('.slider');
-    if (!slider) return;
-    const qrBtn = container.querySelector('[data-index="1"]');
-    const shBtn = container.querySelector('[data-index="2"]');
-    const codeDiv = slider.querySelector('.changeCode');
-    const shText = slider.querySelector('.shText');
-    if (!qrBtn || !shBtn || !codeDiv) return;
-
-    function setActive(active) {
-      const qrDot = qrBtn.querySelector('div');
-      const shDot = shBtn.querySelector('div');
-      if (active === 'qr') {
-        codeDiv.className = 'qrcode changeCode';
-        if (shText) shText.style.display = 'none';
-        if (qrDot) { qrDot.style.background = '#000'; qrDot.classList.add('active'); }
-        if (shDot) { shDot.style.background = ''; shDot.classList.remove('active'); }
-        qrBtn.querySelector('img').style.filter = 'brightness(0) invert(1)';
-        shBtn.querySelector('img').style.filter = '';
-      } else {
-        codeDiv.className = 'shcode changeCode';
-        if (shText) shText.style.display = 'flex';
-        if (shDot) { shDot.style.background = '#000'; shDot.classList.add('active'); }
-        if (qrDot) { qrDot.style.background = ''; qrDot.classList.remove('active'); }
-        shBtn.querySelector('img').style.filter = 'brightness(0) invert(1)';
-        qrBtn.querySelector('img').style.filter = '';
-      }
-    }
-
-    qrBtn.addEventListener('click', e => { e.stopPropagation(); setActive('qr'); });
-    shBtn.addEventListener('click', e => { e.stopPropagation(); setActive('sh'); });
+    showNotification('Скопійовано ✓');
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 9. AI ДІЯ
-// ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
+   15. AI SHEET
+   ══════════════════════════════════════════════════════ */
+const _AI_KB = {
+  'паспорт':   '📋 ID-картка — дійсний документ за законом України.',
+  'права':     '🚗 Посвідчення водія перевірено в базах МВС.',
+  'загран':    '🌍 Закордонний паспорт підходить для ідентифікації на кордоні.',
+  'диплом':    '🎓 Диплом внесено в ЄДЕБО.',
+  'студент':   '🎓 Студентський квиток діє до кінця навчання.',
+  'зброя':     '🔫 Дозвіл на зброю перевірений ТЦК.',
+  'підтримк':  '📞 Служба Дії: 0 800 700 500 (цілодобово).',
+  'допомога':  '📞 Служба Дії: 0 800 700 500.',
+  'документи': '📋 Електронні документи мають юридичну силу.',
+};
+
 function openAiDiia() {
-  const overlay = document.getElementById('aiOverlay');
-  const sheet = document.getElementById('aiSheet');
-  if (overlay && sheet) {
-    overlay.classList.add('open'); sheet.classList.add('open');
-    setTimeout(() => { const i = document.getElementById('aiInput'); if (i) i.focus(); }, 300);
-  }
+  document.getElementById('aiOverlay')?.classList.add('open');
+  document.getElementById('aiSheet')?.classList.add('open');
+  setTimeout(() => document.getElementById('aiInput')?.focus(), 320);
 }
 function closeAiDiia() {
   document.getElementById('aiOverlay')?.classList.remove('open');
   document.getElementById('aiSheet')?.classList.remove('open');
 }
-
-const AI_RESPONSES = {
-  'паспорт': '📋 Паспорт громадянина України є дійсним цифровим документом.',
-  'права':   '🚗 Ваше водійське посвідчення діє на території України.',
-  'загран':  '🌍 Закордонний паспорт у Дії можна використовувати для ідентифікації.',
-  'диплом':  '🎓 Диплом внесено в Реєстр документів про освіту ЄДЕБО.',
-  'підтримк':'📞 Служба турботи Дії: 0 800 700 500.',
-  'документи':'📋 Всі електронні документи мають юридичну силу.',
-};
-
 function sendAiMsg() {
   const input = document.getElementById('aiInput');
-  if (!input) return;
-  const text = (input.value || '').trim();
+  const area  = document.getElementById('aiChatArea');
+  if (!input || !area) return;
+  const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  const area = document.getElementById('aiChatArea');
-  if (!area) return;
+
   const uDiv = document.createElement('div');
   uDiv.className = 'ai-msg user'; uDiv.textContent = text;
-  area.appendChild(uDiv);
+  area.appendChild(uDiv); area.scrollTop = area.scrollHeight;
+
   setTimeout(() => {
-    let answer = '🤖 Дякую за звернення! Скористайтеся розділом «Послуги».';
     const lc = text.toLowerCase();
-    for (const [k, v] of Object.entries(AI_RESPONSES)) { if (lc.includes(k)) { answer = v; break; } }
+    let answer = '🤖 Для детальної консультації — розділ «Послуги» або 0 800 700 500.';
+    for (const [k, v] of Object.entries(_AI_KB)) {
+      if (lc.includes(k)) { answer = v; break; }
+    }
     const bDiv = document.createElement('div');
     bDiv.className = 'ai-msg bot'; bDiv.textContent = answer;
-    area.appendChild(bDiv);
-    area.scrollTop = area.scrollHeight;
-  }, 600);
-  area.scrollTop = area.scrollHeight;
+    area.appendChild(bDiv); area.scrollTop = area.scrollHeight;
+  }, 680);
 }
-
 function aiQuick(el) {
-  const text = el.textContent.replace(/^[\S]+\s/, '');
-  const input = document.getElementById('aiInput');
-  if (input) { input.value = text; sendAiMsg(); }
+  const inp = document.getElementById('aiInput');
+  if (inp) { inp.value = el.textContent.replace(/^\S+\s/, ''); sendAiMsg(); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 10. АДМІН ПАНЕЛЬ
-// ═══════════════════════════════════════════════════════════════
-function setupAdminPanel() {
-  const panel = document.getElementById('admin-panel');
+/* ══════════════════════════════════════════════════════
+   16. TELEGRAM THEME + SAFE AREA
+   ══════════════════════════════════════════════════════ */
+function _initTelegramTheme() {
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return;
+    tg.ready?.(); tg.expand?.();
+    const apply = () => {
+      if (tg.colorScheme === 'dark') document.documentElement.setAttribute('data-theme','dark');
+      else document.documentElement.removeAttribute('data-theme');
+    };
+    apply(); tg.onEvent?.('themeChanged', apply);
+  } catch {}
+}
+
+/* ══════════════════════════════════════════════════════
+   17. OFFLINE WATCHER
+   ══════════════════════════════════════════════════════ */
+function _initOfflineWatcher() {
+  window.addEventListener('online',  () => _setOfflineBanner(false));
+  window.addEventListener('offline', () => _setOfflineBanner(true));
+  if (!navigator.onLine) _setOfflineBanner(true);
+}
+
+/* ══════════════════════════════════════════════════════
+   18. ADMIN PANEL
+   ══════════════════════════════════════════════════════ */
+function _setupAdminPanel() {
+  const panel     = document.getElementById('admin-panel');
   const container = document.getElementById('admin-inputs-container');
-  const saveBtn = document.getElementById('admin-save-btn');
-  const closeBtn = document.getElementById('admin-close-btn');
+  const saveBtn   = document.getElementById('admin-save-btn');
+  const closeBtn  = document.getElementById('admin-close-btn');
   if (!panel || !container) return;
 
-  const fields = [
-    { id: "textName",       label: "Ім'я (Привіт, ...)" },
-    { id: "name",           label: "ПІБ (Укр)" },
-    { id: "nameEn",         label: "ПІБ (Англ)" },
-    { id: "birthDate",      label: "Дата народження" },
-    { id: "rnokpp",         label: "РНОКПП" },
-    { id: "nomerPasport",   label: "Номер паспорта" },
-    { id: "sex",            label: "Стать" },
-    { id: "dateGive",       label: "Дата видачі (Паспорт)" },
-    { id: "dateOut",        label: "Дійсний до" },
-    { id: "organ",          label: "Орган що видав" },
-    { id: "uznr",           label: "УНЗР" },
-    { id: "placeBirth",     label: "Місце народження" },
-    { id: "legalAdress",    label: "Місце проживання" },
-    { id: "zagran_number",  label: "Номер закордонного" },
-    { id: "pravaNnumber",   label: "Номер водійського" },
-    { id: "rightsCategories",label: "Категорії водія" },
-    { id: "nomerStudy",     label: "Номер студентського" },
-    { id: "university",     label: "ВНЗ" },
-    { id: "zbroyaNumber",   label: "Номер дозволу на зброю" },
+  const FIELDS = [
+    { id:'textName',        label:"Ім'я (привіт)" },
+    { id:'name',            label:'ПІБ (укр)' },
+    { id:'nameEn',          label:'ПІБ (англ)' },
+    { id:'birthDate',       label:'Дата народження' },
+    { id:'rnokpp',          label:'РНОКПП' },
+    { id:'nomerPasport',    label:'Номер паспорта' },
+    { id:'sex',             label:'Стать' },
+    { id:'dateGive',        label:'Видано (паспорт)' },
+    { id:'dateOut',         label:'Дійсний до (паспорт)' },
+    { id:'organ',           label:'Орган' },
+    { id:'uznr',            label:'УНЗР' },
+    { id:'placeBirth',      label:'Місце народження' },
+    { id:'legalAdress',     label:'Адреса' },
+    { id:'zagran_number',   label:'№ закордонного' },
+    { id:'dateGiveZ',       label:'Видано (закордонний)' },
+    { id:'dateOutZ',        label:'Дійсний до (закордонний)' },
+    { id:'pravaNnumber',    label:'№ водійського' },
+    { id:'rightsCategories',label:'Категорії' },
+    { id:'dateGivePrava',   label:'Видано (права)' },
+    { id:'srokPrav',        label:'Дійсні до (права)' },
+    { id:'nomerStudy',      label:'№ студентського' },
+    { id:'university',      label:'ВНЗ' },
+    { id:'zbroyaNumber',    label:'№ дозволу зброя' },
+    { id:'zbroyaType',      label:'Тип зброї' },
+    { id:'stepen_dip',      label:'Ступінь диплома' },
+    { id:'number_dip',      label:'№ диплома' },
+    { id:'special_dip',     label:'Спеціальність' },
+    { id:'dayout_dip',      label:'Видано (диплом)' },
   ];
 
   container.innerHTML = '';
-  fields.forEach(f => {
-    const div = document.createElement('div');
-    div.className = 'admin-form-group';
-    div.innerHTML = `<label>${f.label}</label><input type="text" data-field="${f.id}" value="${APP_DATA[f.id] || ''}">`;
-    container.appendChild(div);
+  FIELDS.forEach(f => {
+    const g = document.createElement('div');
+    g.className = 'admin-form-group';
+    g.innerHTML = `<label>${f.label}</label>
+      <input type="text" data-field="${f.id}"
+             value="${String(APP_DATA[f.id] || '').replace(/"/g,'&quot;')}"
+             autocomplete="off">`;
+    container.appendChild(g);
   });
 
   saveBtn?.addEventListener('click', async () => {
-    const updated = {};
     container.querySelectorAll('input[data-field]').forEach(inp => {
-      updated[inp.dataset.field] = inp.value;
-      _localState[inp.dataset.field] = inp.value;
+      const k = inp.dataset.field;
+      APP_DATA[k] = inp.value;
+      _localState[k] = inp.value;
     });
-    localStorage.setItem(LS_KEY, JSON.stringify(_localState));
-    Object.assign(APP_DATA, updated);
-    _refreshAllCards(APP_DATA);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(_localState)); } catch {}
     applyDataToDOM();
 
-    if (typeof DiyaDB !== 'undefined' && DiyaDB) {
-      setAllSyncing('syncing');
-      for (const [k, v] of Object.entries(updated)) {
-        await DiyaDB.saveField(k, v);
+    if (typeof DiyaDB !== 'undefined') {
+      _setSyncAll('syncing');
+      for (const [k,v] of Object.entries(_localState)) {
+        await DiyaDB.saveField(k, v).catch(() => {});
       }
-      setAllSyncing('ok');
+      _setSyncAll('ok');
     }
-
-    showNotification('Дані збережено ✓');
-    panel.classList.remove('open');
-  });
-
-  closeBtn?.addEventListener('click', () => {
-    panel.classList.remove('open');
-    document.getElementById('admin-overlay')?.classList.remove('open');
-  });
-  document.getElementById('admin-overlay')?.addEventListener('click', () => {
+    showNotification('Збережено ✓');
     panel.classList.remove('open');
     document.getElementById('admin-overlay')?.classList.remove('open');
   });
 
+  const _close = () => {
+    panel.classList.remove('open');
+    document.getElementById('admin-overlay')?.classList.remove('open');
+  };
+  closeBtn?.addEventListener('click', _close);
+  document.getElementById('admin-overlay')?.addEventListener('click', _close);
+
+  // Ctrl+Shift+X або 3× клік на лого
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); panel.classList.toggle('open'); }
   });
-
-  let clicks = 0, clickTimeout = null;
+  let _clicks = 0, _ct = null;
   document.querySelector('.logos-container')?.addEventListener('click', () => {
-    if (++clicks === 3) { panel.classList.toggle('open'); clicks = 0; }
-    clearTimeout(clickTimeout);
-    clickTimeout = setTimeout(() => clicks = 0, 500);
+    clearTimeout(_ct); if (++_clicks >= 3) { panel.classList.toggle('open'); _clicks = 0; }
+    _ct = setTimeout(() => _clicks = 0, 600);
   });
 
+  // Фото
   document.getElementById('admin-main-photo')?.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    new FileReader().onload = ev => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
       APP_DATA.mainPhoto = ev.target.result;
       _localState.mainPhoto = ev.target.result;
-      document.querySelectorAll('.card-photo, #imgPassport, #imgStudent, #imgRights, #imgZagran').forEach(img => img.src = ev.target.result);
+      document.querySelectorAll('.card-photo,#imgPassport,#imgStudent,#imgRights,#imgZagran')
+        .forEach(img => img.src = ev.target.result);
     };
-    new FileReader().readAsDataURL(file);
+    reader.readAsDataURL(file);
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 11. ГОЛОВНА ІНІЦІАЛІЗАЦІЯ
-// ═══════════════════════════════════════════════════════════════
-async function initFromDB() {
-  if (typeof DiyaDB === 'undefined' || !DiyaDB) return;
-
-  try {
-    const data = await DiyaDB.load();
-    if (data) {
-      mergeData(data);
-      buildAllCards();
-      applyDataToDOM(data);
-
-      if (data[BIOMETRIC_PREF_KEY] !== undefined) {
-        updateBiometricUIState(data[BIOMETRIC_PREF_KEY]);
-      }
-    }
-
-    DiyaDB.startPolling(30000, (fresh) => {
-      mergeData(fresh);
-      buildAllCards();
-      applyDataToDOM(fresh);
-      if (fresh[BIOMETRIC_PREF_KEY] !== undefined) {
-        updateBiometricUIState(fresh[BIOMETRIC_PREF_KEY]);
-      }
-      showNotification('✓ Дані оновлено з сервера', true);
-    });
-  } catch (e) {
-    console.warn('[DiyaDB] Не вдалося завантажити дані при старті:', e);
-  }
-}
-
+/* ══════════════════════════════════════════════════════
+   19. MAIN INIT
+   ══════════════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', async () => {
+  // 1. Дані
   mergeData({});
-  buildAllCards();
   applyDataToDOM();
 
-  initSplash();
-  setupModals();
-  setupAddDocAndChangeOrder();
-  setupAdminPanel();
+  // 2. Сплеш
+  _initSplash();
 
-  document.querySelectorAll('.start-block > button').forEach(btn => {
-    btn.addEventListener('click', () => { if (btn.dataset.digit) handlePinDigit(btn.dataset.digit); });
+  // 3. PIN
+  document.querySelectorAll('.pin-keyboard > button, .start-block > button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = btn.dataset.digit;
+      if (d !== undefined) handlePinDigit(d);
+    });
   });
+
   document.querySelectorAll('.biometric-btn, #btn-biometrics').forEach(el => {
     el.addEventListener('click', () => {
-      if (!isBiometricsEnabled()) {
+      const bioPref = APP_DATA.biometricsEnabled;
+      if (bioPref === false || bioPref === 'false') {
         showNotification('Біометрію вимкнено у налаштуваннях');
         return;
       }
-      if (typeof triggerBiometricAuth === 'function') {
-        triggerBiometricAuth(false);
-      } else {
-        showNotification('Біометрична автентифікація успішна');
-        unlockApp();
-      }
+      showNotification('Біометрична автентифікація ✓');
+      setTimeout(_unlockApp, 250);
     });
   });
+
   document.querySelector('.forgotPassword')?.addEventListener('click', () => {
-    showNotification(`Код: ${correctPin}`);
-    enteredPin = correctPin; updatePinDots(); setTimeout(unlockApp, 300);
+    showNotification('Код: ' + _correctPin);
+    _enteredPin = _correctPin; _updatePinDots();
+    setTimeout(_unlockApp, 300);
   });
 
+  // 4. Tabs
   document.querySelectorAll('.footer > div[data-index]').forEach(tab => {
-    tab.addEventListener('click', () => { const idx = parseInt(tab.dataset.index); if (idx) switchTab(idx); });
+    tab.addEventListener('click', () => {
+      const idx = parseInt(tab.dataset.index, 10);
+      if (!isNaN(idx)) switchTab(idx);
+    });
   });
 
+  // 5. Cards
+  _bindCardClicks();
+
+  // 6. Sheets + Modals
+  _setupActionSheets();
+  _setupModals();
+
+  // 7. Copy
+  _setupCopy();
+
+  // 8. Swipers
+  initSwipers();
+
+  // 9. AI
+  document.getElementById('aiOverlay')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('aiOverlay')) closeAiDiia();
+  });
+  document.getElementById('aiInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiMsg(); }
+  });
+
+  // 10. Quick actions
   document.querySelectorAll('.quick-action').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const map = { 'scan-qr': 'Сканер QR', 'bonds': 'Військові облігації', 'no-signal': 'Заява про відсутній звʼязок' };
-      showNotification(map[btn.dataset.action] || 'Сервіс активовано');
-    });
+    btn.addEventListener('click', () => showNotification('Сервіс активовано ✓'));
   });
 
-  if (typeof Swiper !== 'undefined' && document.querySelector('.documentSlider')) {
-    const sliderEl = document.querySelector('.documentSlider');
-    if (sliderEl.swiper) {
-      docSwiper = sliderEl.swiper;
-    } else {
-      docSwiper = new Swiper('.documentSlider', {
-        slidesPerView: 1.1,
-        centeredSlides: true,
-        spaceBetween: 14,
-        speed: 400,
-        grabCursor: true,
-        pagination: { el: '.swiper-pagination', clickable: true, dynamicBullets: false },
-      });
-    }
-  }
-  if (typeof Swiper !== 'undefined' && document.querySelector('.sliderNews')) {
-    newsSwiper = new Swiper('.sliderNews', {
-      slidesPerView: 1, spaceBetween: 16,
-      pagination: { el: '.swiper-pagination2', clickable: true }
-    });
-  }
+  // 11. Admin
+  _setupAdminPanel();
 
-  initTelegramTheme();
-  initOfflineWatcher();
-  initPullToRefresh();
-  initSecuritySettings();
+  // 12. Telegram theme
+  _initTelegramTheme();
 
+  // 13. Offline
+  _initOfflineWatcher();
+
+  // 14. Pull-to-refresh
+  _initPullToRefresh();
+
+  // 15. Live clock
+  setInterval(applyDataToDOM, 30_000);
+
+  // 16. DB
   await initFromDB();
 });
 
-window.openAiDiia = openAiDiia;
-window.closeAiDiia = closeAiDiia;
-window.sendAiMsg = sendAiMsg;
-window.aiQuick = aiQuick;
-window.openSettingsSheet = openSettingsSheet;
-window.closeSettingsSheet = closeSettingsSheet;
-window.isBiometricsEnabled = isBiometricsEnabled;
-window.setBiometricsPreference = setBiometricsPreference;
-
-
+/* ── Глобальні exports ─────────────────────────── */
+window.openAiDiia   = openAiDiia;
+window.closeAiDiia  = closeAiDiia;
+window.sendAiMsg    = sendAiMsg;
+window.aiQuick      = aiQuick;

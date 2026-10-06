@@ -77,7 +77,7 @@
     let data = null;
 
     try {
-      if (DB_CONFIG.mode === 'github_raw' && DB_CONFIG.githubRaw && !DB_CONFIG.githubRaw.includes('YOUR_ORG')) {
+      if (DB_CONFIG.mode === 'github_raw') {
         const url = `${DB_CONFIG.githubRaw}/${_uid}.json?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {
@@ -253,6 +253,25 @@
   if (typeof window !== 'undefined' && window.__DIYA_CONFIG__) {
     Object.assign(DB_CONFIG, window.__DIYA_CONFIG__);
   }
+
+  
+  // ── AUTO-DETECT GitHub Pages ────────────────────────────────────
+  // Якщо задеплоєно на https://username.github.io/repo/
+  // — автоматично визначаємо githubRaw
+  (function autoDetect() {
+    const host = location.hostname;
+    const path = location.pathname; // /repo/
+    if (host.endsWith('.github.io') && DB_CONFIG.githubRaw.includes('YOUR_ORG')) {
+      const parts = host.split('.');
+      const org  = parts[0];
+      const repo = path.split('/').filter(Boolean)[0] || '';
+      if (org && repo) {
+        DB_CONFIG.githubRaw = `https://raw.githubusercontent.com/${org}/${repo}/main/users`;
+        console.log('[DB] Auto-detected GitHub Raw:', DB_CONFIG.githubRaw);
+      }
+    }
+  })();
+  // ────────────────────────────────────────────────────────────────
 
   console.log('[DB] DiyaDB ready. mode:', DB_CONFIG.mode);
 
